@@ -1312,25 +1312,15 @@ QString DiffTextWindow::getSelection()
             lineString = lineString.mid( d->m_diff3WrapLineVector[it].wrapLineOffset, size );
          }
 
-         // Consider tabs
-         int outPos = 0;
          for( int i=0; i<size; ++i )
          {
-            int spaces = 1;
-            if ( lineString[i]=='\t' )
-            {
-               spaces = tabber( outPos, d->m_pOptions->m_tabSize );
-            }
-
-            if( d->m_selection.within( line, outPos ) )
+            if( d->m_selection.within( line, i ) )
             {
                selectionString += lineString[i];
             }
-
-            outPos += spaces;
          }
 
-         if( d->m_selection.within( line, outPos ) &&
+         if( d->m_selection.within( line, size ) &&
             !( d->m_bWordWrap && it+1<vectorSize && d3l == d->m_diff3WrapLineVector[it+1].pD3L ) 
            )
          {
@@ -1875,7 +1865,7 @@ void EncodingLabel::mousePressEvent(QMouseEvent *)
          QStringList& recentEncodings = m_pOptions->m_recentEncodings;
          foreach(QString s, recentEncodings)
          {
-            insertCodec("", QTextCodec::codecForName(s.toAscii()), codecEnumList, m_pContextEncodingMenu, currentTextCodecEnum);
+            insertCodec("", QTextCodec::codecForName(s.toLatin1()), codecEnumList, m_pContextEncodingMenu, currentTextCodecEnum);
          }
       }
       // Submenu to add the rest of available encodings
