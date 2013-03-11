@@ -588,6 +588,9 @@ QString FileAccess::absoluteFilePath() const
       if ( m_filePath.isEmpty() )
 	 return QString();
       
+      if ( ! isLocal() )
+         return m_filePath; // return complete url
+
       QFileInfo fi( m_filePath );
       if ( fi.isAbsolute() )
 	 return m_filePath;
