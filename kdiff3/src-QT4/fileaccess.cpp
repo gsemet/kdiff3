@@ -229,8 +229,25 @@ void FileAccess::setFile( const QFileInfo& fi, FileAccess* pParent )
       //d()->m_modificationTime = fi.lastModified();
       //d()->m_accessTime = fi.lastRead();
       d()->m_name       = fi.fileName();
-      if ( m_bSymLink ) 
+      if ( m_bSymLink )
+      {
+#ifdef _WIN32
          d()->m_linkTarget = fi.readLink();
+#else
+         // Unfortunately Qt4 readLink always returns an absolute path, even if the link is relative
+         char s[PATH_MAX+1];
+         int len = readlink(QFile::encodeName(fi.absoluteFilePath()).constData(), s, PATH_MAX);
+         if ( len>0 )
+         {
+            s[len] = '\0';
+            d()->m_linkTarget = QFile::decodeName(s);
+         }
+         else
+         {
+            d()->m_linkTarget = fi.readLink();
+         }
+#endif
+      }
       d()->m_bLocal = true;
       d()->m_bValidData = true;
       d()->m_url = KUrl( fi.filePath() );
@@ -571,6 +588,9 @@ QString FileAccess::absoluteFilePath() const
       if ( m_filePath.isEmpty() )
 	 return QString();
       
+      if ( ! isLocal() )
+         return m_filePath; // return complete url
+
       QFileInfo fi( m_filePath );
       if ( fi.isAbsolute() )
 	 return m_filePath;
