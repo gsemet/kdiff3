@@ -995,10 +995,11 @@ bool DirectoryMergeWindow::Data::init
    m_bUnfoldSubdirs = m_pOptions->m_bDmUnfoldSubdirs;
    m_bSkipDirStatus = m_pOptions->m_bDmSkipDirStatus;
 
+   
+   beginResetModel();
    m_pRoot->m_children.clear();
-
    m_mergeItemList.clear();
-   reset();
+   endResetModel();
    
    m_currentIndexForOperation = m_mergeItemList.end();
 
@@ -1782,7 +1783,8 @@ void DirectoryMergeWindow::Data::prepareListView( ProgressProxy& pp )
 
       setPixmaps( mfi, bCheckC );
    }
-   reset();
+   beginResetModel();
+   endResetModel();
 }
 
 static bool conflictingFileTypes(MergeFileInfos& mfi)
@@ -2219,8 +2221,9 @@ static void sortHelper( MergeFileInfos* pMFI, int sortColumn, Qt::SortOrder orde
 
 void DirectoryMergeWindow::Data::sort( int column, Qt::SortOrder order )
 {
+   beginResetModel();
    sortHelper( m_pRoot, column, order );
-   reset();
+   endResetModel();
 }
 
 //

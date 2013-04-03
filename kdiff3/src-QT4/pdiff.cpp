@@ -1583,13 +1583,25 @@ void KDiff3App::recalcWordWrap(int nofVisibleColumns) // nofVisibleColumns is >=
          sumOfLines += d3l.linesNeededForDisplay;
       }
 
+      ProgressProxy pp;
+      pp.setMaxNofSteps(  (m_bTripleDiff ? 6 : 4 ) );
+      pp.setInformation("Word wrap",false);
       // Let every window calc how many lines will be needed.
       if ( m_pDiffTextWindow1 )
+      {
          m_pDiffTextWindow1->recalcWordWrap(true,0,nofVisibleColumns);
+         pp.step();
+      }
       if ( m_pDiffTextWindow2 )
+      {
          m_pDiffTextWindow2->recalcWordWrap(true,0,nofVisibleColumns);
+         pp.step();
+      }
       if ( m_pDiffTextWindow3 )
+      {
          m_pDiffTextWindow3->recalcWordWrap(true,0,nofVisibleColumns);
+         pp.step();
+      }
 
       sumOfLines=0;
       for ( i=m_diff3LineList.begin(); i!=m_diff3LineList.end(); ++i )
@@ -1601,11 +1613,20 @@ void KDiff3App::recalcWordWrap(int nofVisibleColumns) // nofVisibleColumns is >=
 
       // Finish the initialisation:
       if ( m_pDiffTextWindow1 )
+      {
          m_pDiffTextWindow1->recalcWordWrap(true,sumOfLines,nofVisibleColumns);
+         pp.step();
+      }
       if ( m_pDiffTextWindow2 )
+      {
          m_pDiffTextWindow2->recalcWordWrap(true,sumOfLines,nofVisibleColumns);
+         pp.step();
+      }
       if ( m_pDiffTextWindow3 )
+      {
          m_pDiffTextWindow3->recalcWordWrap(true,sumOfLines,nofVisibleColumns);
+         pp.step();
+      }
 
       m_neededLines = sumOfLines;
    }
