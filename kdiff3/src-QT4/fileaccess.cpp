@@ -251,7 +251,7 @@ void FileAccess::setFile( const QFileInfo& fi, FileAccess* pParent )
       d()->m_bLocal = true;
       d()->m_bValidData = true;
       d()->m_url = KUrl( fi.filePath() );
-      if ( ! d()->m_url.isValid() )
+      if ( d()->m_url.isRelative() )
       {
          d()->m_url.setPath( absoluteFilePath() );
       }
@@ -516,7 +516,7 @@ KUrl FileAccess::url() const
    else
    {
       KUrl url( m_filePath );
-      if ( ! url.isValid() )
+      if ( url.isRelative() )
       {
          url.setPath( absoluteFilePath() );
       }
@@ -1200,7 +1200,7 @@ bool FileAccessJobHandler::rename( const QString& dest )
       return false;
 
    KUrl kurl( dest );
-   if ( !kurl.isValid() )
+   if ( kurl.isRelative() )
       kurl = KUrl( QDir().absoluteFilePath(dest) ); // assuming that invalid means relative
 
    if ( m_pFileAccess->isLocal() && kurl.isLocalFile() )
