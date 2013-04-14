@@ -10,7 +10,7 @@ ifdef DEBUG
   CXXFLAGS ?= -g
 else
   CXXFLAGS ?= -Os
-  LDFLAGS += -s -static-libgcc
+  LDFLAGS += -L. -s -static-libgcc
 endif
 CXXFLAGS += -pedantic -Wall -W -D_UNICODE -DUNICODE
 
@@ -49,7 +49,6 @@ clean:
 
 $(DLL): $(OBJ)
 	dllwrap.exe \
-		--mno-cygwin \
 		--def $(DEFFILE) \
 		--output-exp ${EXPLIB} \
 		--driver-name c++ -L/usr/local/lib -L/usr/lib/mingw \

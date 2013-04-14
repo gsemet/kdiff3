@@ -1529,6 +1529,7 @@ void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int
 
    if ( bWordWrap )
    {
+      ProgressProxy pp;
       d->m_lineNumberWidth = d->m_pOptions->m_bShowLineNumbers ? (int)log10((double)qMax(d->m_size,1))+1 : 0;
 
       d->m_diff3WrapLineVector.resize( wrapLineVectorSize );
@@ -1540,8 +1541,13 @@ void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int
       int i;
       int wrapLineIdx = 0;
       int size = d->m_pDiff3LineVector->size();
+      pp.setMaxNofSteps(size);
       for( i=0; i<size; ++i )
       {
+         pp.setInformation( i18n("Word wrap"), double(i)/size, false );
+         if ( pp.wasCancelled() ) 
+            break;
+
          QString s = d->getString( i );
          QTextLayout textLayout( s, font(), this);
          d->prepareTextLayout( textLayout, true, visibleTextWidth );
