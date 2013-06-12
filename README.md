@@ -89,7 +89,7 @@ Requirements & Installation
      your system)
 
    Typically in a terminal (e.g. konsole) you cd into the kdiff3-directory and
-   run "./configure kde4". This script is essentially the same as these commands:
+   run `./configure kde4`. This script is essentially the same as these commands:
 
       mkdir releaseKde
       cd releaseKde
@@ -102,11 +102,12 @@ Requirements & Installation
       # install as root user
       sudo make install
 
-   Now KDiff3 should be ready to use. Type "kdiff3" to start it.
+   Now KDiff3 should be ready to use. Type `kdiff3` to start it.
    There should also be a entry in your KDE-start menu in
    "(Applications->)Development".
 
    For creating a debug version:
+
       mkdir debug
       cd debug
       # Find out your KDE4-directory and note the result
@@ -115,9 +116,9 @@ Requirements & Installation
       make
       sudo make install
 
-   The <KDE4-prefix> depends on your distribution:
-   The command "kde4-config --prefix" should tell you.
-   - For opensuse 11 use "/usr".
+   The `<KDE4-prefix>` depends on your distribution:
+   The command `kde4-config --prefix` should tell you.
+   - For opensuse 11 use `/usr`.
 
 - Building KDiff3 with Qt4-libs, but without KDE
     - for Linux/Un*x
@@ -128,29 +129,26 @@ Requirements & Installation
    compilation.
 
    You always need:
-      - kdiff3-0.9.97.tar.gz
-
-      - for Un*x:    gcc, g++ with version >=3.4.2
-                     Qt-X11-libraries
-
-      - for Windows: Qt-win-libs
+      - `kdiff3-0.9.97.tar.gz`
+      - for Un*x:    `gcc`, `g++` with version >=3.4.2
+                     `Qt-X11-libraries`
+      - for Windows: `Qt-win-libs`
                      If you have the Qt4 commercial edition, then compile with
                      Visual Studio.NET 2003 or newer.
                      If you use the Qt4 open source edition, then you'll need
                      MinGW.
                      I verified that compilation and debugging works with
                      these packages (probably newer ones will also work):
-                     - Use MinGW-5.1.4.exe or newer to install the following
+                     - Use `MinGW-5.1.4.exe` or newer to install the following
                        or newer:
-                       - gcc-core-3.4.5-20060117-1.tar.gz
-                       - binutils-2.17.50-20060824-1.tar.gz
-                       - gcc-g++-3.4.5-20060117-1.tar.gz
-                       - mingw-runtime-3.14.tar.gz
-                       - mingw32-make-3.81-2.tar.gz
-                       - w32api-3.11.tar.gz
-                     - gdb-6.3-2.exe (for debugging)
-
-      - for Mac:     gcc, g++ with version >=3.4.2
+                       - `gcc-core-3.4.5-20060117-1.tar.gz`
+                       - `binutils-2.17.50-20060824-1.tar.gz`
+                       - `gcc-g++-3.4.5-20060117-1.tar.gz`
+                       - `mingw-runtime-3.14.tar.gz`
+                       - `mingw32-make-3.81-2.tar.gz`
+                       - `w32api-3.11.tar.gz`
+                     - `gdb-6.3-2.exe` (for debugging)
+      - for Mac:     `gcc`, `g++` with version >=3.4.2
                      Qt-Mac-libraries
       - Optional: Qt Creator IDE: Development environment optimized for Qt
         (from http://qt-project.org)
@@ -158,42 +156,42 @@ Requirements & Installation
   Build-instructions (Un*x):
     Assuming Qt is correctly installed run "./configure qt4" which essentially
     does the same as:
-    - mkdir releaseQt
-    - cd releaseQt
-    - qmake ../src-QT4/kdiff3.pro
-    - make (or "gmake" for GNU-Make)
+    - `mkdir releaseQt`
+    - `cd releaseQt`
+    - `qmake ../src-QT4/kdiff3.pro`
+    - `make` (or `gmake` for GNU-Make)
 
   Build-instructions (Windows):
-    - If you use Qt Creator from the SDK just load the src-QT4\kdiff3.pro 
+    - If you use Qt Creator from the SDK just load the `src-QT4\kdiff3.pro` 
       file and build.
     On the command line (cmd.exe):
-    - set QTDIR=<QT4-dir>         e.g.: c:\qt\4.4.1
-      set "PATH=%QTDIR%\bin;%PATH%"
+    - `set QTDIR=<QT4-dir>`         e.g.: `c:\qt\4.4.1`
+      `set "PATH=%QTDIR%\bin;%PATH%`
     - Prepare compiler settings:
-      For Visual Studio run the respective vsvars32.bat
-      For MinGW add the path: E.g. set "PATH=c:\mingw\bin;%PATH%"
-    - cd into the directory kdiff3-0.9.97\src-Qt4 and type
-    - qmake kdiff3.pro
-    - Either "nmake" for Visual Studio or "mingw32-make" depending on what you
+      For Visual Studio run the respective `vsvars32.bat`
+      For MinGW add the path: E.g. set `PATH=c:\mingw\bin;%PATH%`
+    - cd into the directory `kdiff3-0.9.97\src-Qt4` and type
+    - `qmake kdiff3.pro`
+    - Either `nmake` for Visual Studio or `mingw32-make` depending on what you
       have.  
 
   Debugging with MinGW under Windows:
     - Qt Creator worked very well as debugger frontend too!
     - Debugging without gdb on the console:
-      - The qt-win-opensource-4.4.1-mingw.exe only installs release dlls. You
+      - The `qt-win-opensource-4.4.1-mingw.exe` only installs release dlls. You
         will have to compile the debug dlls yourself. Enter the
-        qt-4.4.1-directory and run "configure -debug" and then "mingw32-make".
+        `qt-4.4.1-directory` and run `configure -debug` and then `mingw32-make`.
       - cd into the directory kdiff3-0.9.97\src-Qt4
-      - edit the file "Makefile.Debug" and in the LFLAGS replace
-        "-Wl,-subsystem,windows" with "-Wl,-subsystem,console" (this is
+      - edit the file `Makefile.Debug` and in the LFLAGS replace
+        `-Wl,-subsystem,windows` with `-Wl,-subsystem,console` (this is
         necessary so that gdb can send a break signal to the running program)
-      - mingw32-make debug (create a debuggable executable)
-      - gdb debug\kdiff3.exe
-      - At the "(gdb)"-prompt type "run" and enter to start.
+      - `mingw32-make debug` (create a debuggable executable)
+      - `gdb debug\kdiff3.exe`
+      - At the "(gdb)"-prompt type `run` and enter to start.
       - While the program runs you can't set breakpoints, first interrupt it
         with Ctrl-C.
-      - Use "help" to find out about how to use gdb. (Important commands: run,
-        break, backtrace, print, quit)
+      - Use `help` to find out about how to use gdb. (Important commands: `run`,
+        `break`, `backtrace`, `print`, `quit`)
          Using break with c++-methods requires to specify the parameter types
          too. Breakpoints in constructors might not work.
 
@@ -203,28 +201,28 @@ Requirements & Installation
     1) Install Qt/Mac 4.x with thread support, static libraries and universal
     flag. (For Qt4 run "configure -static"; only necessary if the final binary
     should not require shared Qt4-libs.)
-    2) cd .../kdiff3-0.9.97/src-QT4
+    2) `cd .../kdiff3-0.9.97/src-QT4`
     3a) Create a makefile for kdiff3 by executing:
-       qmake kdiff3.pro
+       `qmake kdiff3.pro`
     3b) optionally generate XCode-Project (for debugging purposes only) by
     executing:
-       qmake -spec macx-xcode kdiff3.pro
+       `qmake -spec macx-xcode kdiff3.pro`
     4) Execute:
-       make
-    5) After the build completes copy kdiff3 from the kdiff3-0.9.97/src-QT4
+       `make`
+    5) After the build completes copy kdiff3 from the `kdiff3-0.9.97/src-QT4`
        directory to:
-       /Applications
+       `/Applications`
 
   Creating and installing the translation messages
     The po directory contains translations from the KDE-translation teams.
     If you use the Qt-only-version of KDiff3, then the installation described
     above won't install translations automatically.
     To create and install the translations:
-    1) cd .../kdiff3-0.9.97/po
-    2) sh create_qm_files install    (asks for a super user password)
+    1) `cd .../kdiff3-0.9.97/po`
+    2) `sh create_qm_files install`    (asks for a super user password)
     Just to create the files in the po directory (as needed for the windows
     version):
-    2) sh create_qm_files local
+    2) `sh create_qm_files local`
 
 
 (End of KDiff3 with Qt4-instructions)
@@ -234,15 +232,15 @@ Additional hints
 ----------------
 
    Start from commandline:
-   - Comparing 2 files:     kdiff3 file1 file2
-   - Merging 2 files:       kdiff3 file1 file2 -o outputfile
-   - Comparing 3 files:     kdiff3 file1 file2 file3
-   - Merging 3 files:       kdiff3 file1 file2 file3 -o outputfile
+   - Comparing 2 files:     `kdiff3 file1 file2`
+   - Merging 2 files:       `kdiff3 file1 file2 -o outputfile`
+   - Comparing 3 files:     `kdiff3 file1 file2 file3`
+   - Merging 3 files:       `kdiff3 file1 file2 file3 -o outputfile`
         Note that file1 will be treated as base of file2 and file3.
 
    If all files have the same name but are in different directories, you can
    reduce typework by specifying the filename only for the first file. E.g.:
-   - Comparing 3 files:     kdiff3 dir1/filename dir2 dir3
+   - Comparing 3 files:     `kdiff3 dir1/filename dir2 dir3`
    (This also works in the open-dialog.)
 
    If you start without arguments, then a dialog will appear where you can
