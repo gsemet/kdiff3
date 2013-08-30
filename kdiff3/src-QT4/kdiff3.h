@@ -325,7 +325,7 @@ class KDiff3App : public QSplitter
    KParts::MainWindow*       m_pKDiff3Shell;
    bool m_bAutoFlag;
    bool m_bAutoMode;
-   void recalcWordWrap(int nofVisibleColumns=-1);
+   bool recalcWordWrap(int nofVisibleColumns=-1);
    bool m_bRecalcWordWrapPosted;
    void setHScrollBarRange();
 

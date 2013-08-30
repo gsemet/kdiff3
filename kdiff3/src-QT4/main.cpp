@@ -14,7 +14,7 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-
+#include "stable.h"
 #include <kcmdlineargs.h>
 #include <kaboutdata.h>
 #include <klocale.h>
@@ -28,6 +28,7 @@
 #include <QLocale>
 #include <QFont>
 #include <QClipboard>
+#include <QMainWindow>
 #include <vector>
 
 #ifdef KREPLACEMENTS_H
