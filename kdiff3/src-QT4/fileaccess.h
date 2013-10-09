@@ -30,10 +30,12 @@ class QFileInfo;
 class ProgressProxyExtender: public ProgressProxy
 {
   Q_OBJECT
+public:
+   ProgressProxyExtender() { setMaxNofSteps(100); }
 
 public slots:
-  void slotListDirInfoMessage( KJob*, const QString& msg );
-  void slotPercent( KJob*, unsigned long percent );
+   void slotListDirInfoMessage( KJob*, const QString& msg );
+   void slotPercent( KJob*, unsigned long percent );
 };
 
 class FileAccess
