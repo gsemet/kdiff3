@@ -690,6 +690,7 @@ static bool interruptableReadFile( QFile& f, void* pDestBuffer, unsigned long ma
    ProgressProxy pp;
    const unsigned long maxChunkSize = 100000;
    unsigned long i=0;
+   pp.setMaxNofSteps( maxLength / maxChunkSize + 1 );
    while( i<maxLength )
    {
       unsigned long nextLength = min2( maxLength-i, maxChunkSize );
@@ -701,7 +702,8 @@ static bool interruptableReadFile( QFile& f, void* pDestBuffer, unsigned long ma
       i+=reallyRead;
 
       pp.setCurrent( double(i)/maxLength );
-      if ( pp.wasCancelled() ) return false;
+      if ( pp.wasCancelled() ) 
+         return false;
    }
    return true;
 }
@@ -738,6 +740,7 @@ bool FileAccess::writeFile( const void* pSrcBuffer, unsigned long length )
       if ( f.open( QIODevice::WriteOnly ) )
       {
          const unsigned long maxChunkSize = 100000;
+         pp.setMaxNofSteps( length / maxChunkSize + 1 );
          unsigned long i=0;
          while( i<length )
          {
@@ -749,8 +752,9 @@ bool FileAccess::writeFile( const void* pSrcBuffer, unsigned long length )
             }
             i+=reallyWritten;
 
-            pp.setCurrent( double(i)/length );
-            if ( pp.wasCancelled() ) return false;
+            pp.step();
+            if ( pp.wasCancelled() ) 
+               return false;
          }
          f.close();
 #ifndef _WIN32
@@ -1806,12 +1810,12 @@ void FileAccessJobHandler::slotListDirProcessNewEntries( KIO::Job*, const KIO::U
 
 void ProgressProxyExtender::slotListDirInfoMessage( KJob*, const QString& msg )
 {
-   setInformation( msg, 0.0 );
+   setInformation( msg, 0 );
 }
 
 void ProgressProxyExtender::slotPercent( KJob*, unsigned long percent )
 {
-   setCurrent( percent/100.0 );
+   setCurrent( percent );
 }
 
 
