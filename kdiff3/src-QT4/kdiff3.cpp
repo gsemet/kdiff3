@@ -195,8 +195,8 @@ KDiff3App::KDiff3App(QWidget* pParent, const char* /*name*/, KDiff3Part* pKDiff3
          pDialog->resize(600,400);
          pDialog->exec();
 #else
-         fprintf(stderr, "%s\n", title.toLatin1().constData());
-         fprintf(stderr, "%s\n", s.toLatin1().constData());
+         printf( "%s\n", title.toLatin1().constData());
+         printf( "%s\n", s.toLatin1().constData());
 #endif
          exit(1);
       }
