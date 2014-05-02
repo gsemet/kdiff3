@@ -119,6 +119,7 @@ static void showHelp()
 QString getTranslationDir(const QString& locale)
 {
    #if defined(_WIN32) || defined(Q_OS_OS2)
+      (void) locale; 
       QString exePath;
       exePath = QCoreApplication::applicationDirPath();
       return exePath+"/translations";

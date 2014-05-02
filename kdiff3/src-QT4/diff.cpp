@@ -924,7 +924,7 @@ void SourceData::FileData::preprocess( bool bPreserveCR, QTextCodec* pEncoding )
             {
             //case eLineEndStyleUnix: const_cast<QChar*>(m_v[lineIdx].pLine)[lineLength] = '\n'; break;
             case eLineEndStyleDos:  const_cast<QChar*>(m_v[lineIdx].pLine)[lineLength] = '\r'; break;
-            case eLineEndStyleUndefined: const_cast<QChar*>(m_v[lineIdx].pLine)[lineLength] = '\x0b'; break;
+            //case eLineEndStyleUndefined: const_cast<QChar*>(m_v[lineIdx].pLine)[lineLength] = '\x0b'; break;
             }
          }
          lineLength = 0;
