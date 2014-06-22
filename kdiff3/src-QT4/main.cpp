@@ -220,11 +220,18 @@ int main(int argc, char *argv[])
    options.add( "+[File2]", ki18n("file2 to open") );
    options.add( "+[File3]", ki18n("file3 to open") );
 
-   initialiseCmdLineArgs( options );
-
-   KCmdLineArgs::addCmdLineOptions( options );
-
+#if defined(_WIN32) || defined(Q_OS_OS2)
+   // on Windows applicationDirPath() is called and needs a QApplication
    KApplication app;
+   initialiseCmdLineArgs( options );
+   KCmdLineArgs::addCmdLineOptions( options );
+   app.parseOptions();
+#else
+   // on other systems options should be initialized before creating the QApplication 
+   initialiseCmdLineArgs( options );
+   KCmdLineArgs::addCmdLineOptions( options );
+   KApplication app;
+#endif
 
 #ifdef KREPLACEMENTS_H
    QString locale;

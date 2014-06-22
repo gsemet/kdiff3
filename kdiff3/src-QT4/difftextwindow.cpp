@@ -16,6 +16,7 @@
  ***************************************************************************/
 
 #include "difftextwindow.h"
+#include "kdiff3.h"
 #include "merger.h"
 #include "options.h"
 
@@ -42,6 +43,8 @@
 #include <cmath>
 #include <cstdlib>
 #include <assert.h>
+
+static QAtomicInt s_runnableCount = 0;
 
 
 class DiffTextWindowData
@@ -1524,7 +1527,6 @@ void DiffTextWindow::convertSelectionToD3LCoords()
       return;
    }
 
-
    // convert the d->m_selection to unwrapped coordinates: Later restore to new coords
    int firstD3LIdx, firstD3LPos;
    QString s = d->getLineString( d->m_selection.beginLine() );
@@ -1540,27 +1542,66 @@ void DiffTextWindow::convertSelectionToD3LCoords()
    d->m_selection.end( lastD3LIdx, lastD3LPos );
 }
 
+int s_maxNofRunnables = 0;
+
 class RecalcWordWrapRunnable : public QRunnable
 {
    DiffTextWindow* m_pDTW;
+   DiffTextWindowData* m_pDTWData;
    int m_nofVisibleColumns;
    int m_cacheIdx;
-   ProgressProxy* m_pProgressProxy;
 public:
-   RecalcWordWrapRunnable( DiffTextWindow* p, int nofVisibleColumns, int cacheIdx, ProgressProxy* pPP ) 
-      : m_pDTW(p), m_nofVisibleColumns(nofVisibleColumns), m_cacheIdx(cacheIdx), m_pProgressProxy(pPP)
+   RecalcWordWrapRunnable( DiffTextWindow* p, DiffTextWindowData* pData, int nofVisibleColumns, int cacheIdx ) 
+      : m_pDTW(p), m_pDTWData(pData), m_nofVisibleColumns(nofVisibleColumns), m_cacheIdx(cacheIdx)
    {
       setAutoDelete(true);
+      //++s_runnableCount; // in Qt>=5.3 only
+      s_runnableCount.fetchAndAddOrdered(1);
    }
    void run()
    {
-      m_pDTW->recalcWordWrapHelper(true,0,m_nofVisibleColumns,m_cacheIdx,m_pProgressProxy);
+      m_pDTW->recalcWordWrapHelper(true,0,m_nofVisibleColumns,m_cacheIdx);
+      // int newValue = --s_runnableCount; // in Qt>=5.3 only
+      int newValue = s_runnableCount.fetchAndAddOrdered(-1) - 1;
+      g_pProgressDialog->setCurrent(s_maxNofRunnables - s_runnableCount);
+      if (newValue == 0)
+      {
+         QWidget* p = m_pDTW;
+         while (p )
+         {
+            p = p->parentWidget();
+            if (KDiff3App* pKDiff3App = dynamic_cast<KDiff3App*>(p))
+            {
+               QMetaObject::invokeMethod(pKDiff3App, "slotFinishRecalcWordWrap", Qt::QueuedConnection);
+               break;
+            }
+         }
+      }
    }
 };
 
-void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth, ProgressProxy* pPP )
+static QList<QRunnable*> s_runnables;
+
+void startRunnables()
 {
-   if ( d->m_pDiff3LineVector==0 || ! d->m_bPaintingAllowed || !isVisible() )
+   g_pProgressDialog->setStayHidden(true);
+   g_pProgressDialog->push();
+   g_pProgressDialog->setMaxNofSteps(s_runnables.count());
+   s_maxNofRunnables = s_runnables.count();
+   g_pProgressDialog->setInformation(i18n("Word wrap (Cancel disables word wrap)"), false);
+   g_pProgressDialog->setCurrent(0);
+
+   for (int i = 0; i < s_runnables.count(); ++i)
+   {
+      QThreadPool::globalInstance()->start(s_runnables[i]);
+   }
+   s_runnables.clear();
+}
+
+
+void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth )
+{
+   if (d->m_pDiff3LineVector == 0 || /*(wrapLineVectorSize==0 && !d->m_bPaintingAllowed) ||*/ !isVisible())
    {
       d->m_bWordWrap = bWordWrap;
       if (!bWordWrap)  d->m_diff3WrapLineVector.resize( 0 );
@@ -1575,33 +1616,39 @@ void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int
       d->m_lineNumberWidth = d->m_pOptions->m_bShowLineNumbers ? (int)log10((double)qMax(d->m_size,1))+1 : 0;
 
       d->m_diff3WrapLineVector.resize( wrapLineVectorSize );
-   }
 
-   if ( !bWordWrap || wrapLineVectorSize==0 )
-      d->m_wrapLineCacheList.clear();
+      if ( wrapLineVectorSize==0 )
+         d->m_wrapLineCacheList.clear();
 
-   if ( wrapLineVectorSize == 0 )
-   {
-      pPP->addNofSteps( d->m_pDiff3LineVector->size()/2000 );
-      for( int i=0,j=0; i<d->m_pDiff3LineVector->size(); i+=2000, ++j )
-      //int i=0;
+      if ( wrapLineVectorSize == 0 )
       {
-         d->m_wrapLineCacheList.append(QVector<DiffTextWindowData::WrapLineCacheData>());
-         QThreadPool::globalInstance()->start( new RecalcWordWrapRunnable(this,visibleTextWidth,j,pPP) );
+         d->m_bPaintingAllowed = false;
+         for (int i = 0, j = 0; i<d->m_pDiff3LineVector->size(); i += 2000, ++j)
+         //int i=0;
+         {
+            d->m_wrapLineCacheList.append(QVector<DiffTextWindowData::WrapLineCacheData>());
+            s_runnables.push_back( new RecalcWordWrapRunnable(this,d,visibleTextWidth,j) );
+         }
+         //recalcWordWrap( bWordWrap, wrapLineVectorSize, visibleTextWidth, 0 );
       }
-      //recalcWordWrap( bWordWrap, wrapLineVectorSize, visibleTextWidth, 0 );
+      else
+      {
+         recalcWordWrapHelper( bWordWrap, wrapLineVectorSize, visibleTextWidth, 0 );
+         d->m_bPaintingAllowed = true;
+      }
    }
    else
    {
-      recalcWordWrapHelper( bWordWrap, wrapLineVectorSize, visibleTextWidth, 0, pPP );
+      d->m_wrapLineCacheList.clear();
+      d->m_bPaintingAllowed = true;
    }
 }
 
-void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth, int cacheListIdx, ProgressProxy* pPP )
+void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth, int cacheListIdx )
 {
    if ( bWordWrap )
    {
-      if ( pPP->wasCancelled() ) 
+      if ( g_pProgressDialog->wasCancelled() )
          return;
       if (visibleTextWidth<0)
          visibleTextWidth = getVisibleTextAreaWidth();
@@ -1619,6 +1666,8 @@ void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSiz
       QTextLayout textLayout( QString(), font(), this);
       for( i=firstD3LineIdx; i<endIdx; ++i )
       {
+         if (g_pProgressDialog->wasCancelled())
+            return;
          //pp.setInformation( i18n("Word wrap"), double(i)/size, false );
 
          int linesNeeded = 0;
@@ -1696,7 +1745,6 @@ void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSiz
             }
          }
       }
-      pPP->step(false);
 
       if ( wrapLineVectorSize>0 )
       {

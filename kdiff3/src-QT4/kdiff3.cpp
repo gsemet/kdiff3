@@ -147,7 +147,7 @@ KDiff3App::KDiff3App(QWidget* pParent, const char* /*name*/, KDiff3Part* pKDiff3
    // Needed before any file operations via FileAccess happen.
    if (!g_pProgressDialog)
    {
-      g_pProgressDialog = new ProgressDialog(0);
+      g_pProgressDialog = new ProgressDialog(this,statusBar());
       g_pProgressDialog->setStayHidden( true );
    }
 

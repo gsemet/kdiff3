@@ -325,17 +325,21 @@ class KDiff3App : public QSplitter
    KParts::MainWindow*       m_pKDiff3Shell;
    bool m_bAutoFlag;
    bool m_bAutoMode;
-   bool recalcWordWrap(int nofVisibleColumns=-1);
+   void recalcWordWrap(int nofVisibleColumns=-1);
    bool m_bRecalcWordWrapPosted;
    void setHScrollBarRange();
 
    int m_iCumulativeWheelDelta;
+
+   int m_visibleTextWidthForPrinting; // only needed during recalcWordWrap
+   int m_firstD3LIdx;                   // only needed during recalcWordWrap
 
 public slots:
    void resizeDiffTextWindow(int newWidth, int newHeight);
    void resizeMergeResultWindow();
    void slotRecalcWordWrap();
    void postRecalcWordWrap();
+   void slotFinishRecalcWordWrap();
 
    void showPopupMenu( const QPoint& point );
 

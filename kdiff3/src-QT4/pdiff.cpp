@@ -1537,44 +1537,57 @@ void KDiff3App::slotAutoAdvanceToggled()
 void KDiff3App::slotWordWrapToggled()
 {
    m_pOptions->m_bWordWrap = wordWrap->isChecked();
-   bool bSuccess = recalcWordWrap();
-   if ( ! bSuccess )
-   {
-      wordWrap->setChecked(false);
-      slotWordWrapToggled();
-   }
+   postRecalcWordWrap();
 }
 
 void KDiff3App::postRecalcWordWrap()
 {
    if ( ! m_bRecalcWordWrapPosted )
    {
-      QTimer::singleShot( 1, this, SLOT(slotRecalcWordWrap()) );
+      m_firstD3LIdx = -1;
+      QTimer::singleShot( 1 /* ms */, this, SLOT(slotRecalcWordWrap()) );
       m_bRecalcWordWrapPosted = true;
+   }
+   else
+   {
+      g_pProgressDialog->cancel(ProgressDialog::eResize);
    }
 }
 
 void KDiff3App::slotRecalcWordWrap()
 {
-   bool bSuccess = recalcWordWrap();
-   m_bRecalcWordWrapPosted = false;
+   recalcWordWrap();
+}
 
-   if ( ! bSuccess )
+// Enable or disable all widgets except the status bar widget.
+static void mainWindowEnable(QWidget* pWidget, bool bEnable)
+{
+   if (QMainWindow* pWindow = dynamic_cast<QMainWindow*>(pWidget->window()))
    {
-      wordWrap->setChecked(false);
-      slotWordWrapToggled();
+      QWidget* pStatusBarWidget = pWindow->statusBar();
+      QList<QObject*> children = pWindow->children();
+      for (int i = 0; i < children.count(); ++i)
+      {
+         if (children[i]->isWidgetType())
+         {
+            QWidget* pChildWidget = (QWidget*)children[i];
+            if (pChildWidget != pStatusBarWidget)
+               pChildWidget->setEnabled(bEnable);
+         }
+      }
    }
 }
 
-bool KDiff3App::recalcWordWrap(int nofVisibleColumns) // nofVisibleColumns is >=0 only for printing, otherwise the really visible width is used
+// visibleTextWidthForPrinting is >=0 only for printing, otherwise the really visible width is used
+void KDiff3App::recalcWordWrap(int visibleTextWidthForPrinting)
 {
-   QElapsedTimer et;
-   et.start();
-   int tel1 = 0;
-   bool bPrinting = nofVisibleColumns>=0;
-   int firstD3LIdx = 0;
-   if( m_pDiffTextWindow1 ) 
-      firstD3LIdx = m_pDiffTextWindow1->convertLineToDiff3LineIdx( m_pDiffTextWindow1->getFirstLine() );
+   m_visibleTextWidthForPrinting = visibleTextWidthForPrinting;
+   if (m_firstD3LIdx < 0)
+   {
+      m_firstD3LIdx = 0;
+      if (m_pDiffTextWindow1)
+         m_firstD3LIdx = m_pDiffTextWindow1->convertLineToDiff3LineIdx(m_pDiffTextWindow1->getFirstLine());
+   }
 
    // Convert selection to D3L-coords (converting back happens in DiffTextWindow::recalcWordWrap()
    if ( m_pDiffTextWindow1 )
@@ -1587,6 +1600,8 @@ bool KDiff3App::recalcWordWrap(int nofVisibleColumns) // nofVisibleColumns is >=
 
    if ( !m_diff3LineList.empty() && m_pOptions->m_bWordWrap )
    {
+      mainWindowEnable( window(), false);
+
       Diff3LineList::iterator i;
       int sumOfLines=0;
       for ( i=m_diff3LineList.begin(); i!=m_diff3LineList.end(); ++i )
@@ -1597,44 +1612,68 @@ bool KDiff3App::recalcWordWrap(int nofVisibleColumns) // nofVisibleColumns is >=
          sumOfLines += d3l.linesNeededForDisplay;
       }
 
-      ProgressProxy pp;
-      //pp.setMaxNofSteps(  (m_bTripleDiff ? 4 : 3 ) );
-      pp.setInformation(i18n("Word wrap (Cancel disables word wrap)"),false);
       // Let every window calc how many lines will be needed.
       if ( m_pDiffTextWindow1 )
       {
-         m_pDiffTextWindow1->recalcWordWrap(true,0,nofVisibleColumns,&pp);
-         if ( pp.wasCancelled() )
-            return false;
-         //pp.step();
+         m_pDiffTextWindow1->recalcWordWrap(true,0,m_visibleTextWidthForPrinting);
       }
       if ( m_pDiffTextWindow2 )
       {
-         m_pDiffTextWindow2->recalcWordWrap(true,0,nofVisibleColumns,&pp);
-         if ( pp.wasCancelled() )
-            return false;
-         //pp.step();
+         m_pDiffTextWindow2->recalcWordWrap(true, 0, m_visibleTextWidthForPrinting);
       }
       if ( m_pDiffTextWindow3 )
       {
-         m_pDiffTextWindow3->recalcWordWrap(true,0,nofVisibleColumns,&pp);
-         if ( pp.wasCancelled() )
-            return false;
-         //pp.step();
+         m_pDiffTextWindow3->recalcWordWrap(true, 0, m_visibleTextWidthForPrinting);
       }
+      startRunnables();
+   }
+   else
+   {
+      g_pProgressDialog->clearCancelState(); // clear cancelled state if previously set
+      m_neededLines = m_diff3LineVector.size();
+      if ( m_pDiffTextWindow1 )
+         m_pDiffTextWindow1->recalcWordWrap(false,0,0);
+      if ( m_pDiffTextWindow2 )
+         m_pDiffTextWindow2->recalcWordWrap(false,0,0);
+      if ( m_pDiffTextWindow3 )
+         m_pDiffTextWindow3->recalcWordWrap(false,0,0);
 
-      while( ! QThreadPool::globalInstance()->waitForDone(100) )
+      slotFinishRecalcWordWrap();
+   }
+}
+
+void KDiff3App::slotFinishRecalcWordWrap()
+{
+   g_pProgressDialog->pop();
+
+   if (g_pProgressDialog->wasCancelled())
+   {
+      if (g_pProgressDialog->cancelReason() == ProgressDialog::eUserAbort)
       {
-         pp.recalc(); // implicit process events and redraw
+         wordWrap->setChecked(false);
+         m_pOptions->m_bWordWrap = wordWrap->isChecked();
+         QTimer::singleShot(1 /* ms */, this, SLOT(slotRecalcWordWrap())); // do it again
       }
+      else // eResize
+      {
+         QTimer::singleShot(1 /* ms */, this, SLOT(slotRecalcWordWrap())); // do it again
+      }
+      return;
+   }
+   else
+   {
+      m_bRecalcWordWrapPosted = false;
+   }
 
-      if ( pp.wasCancelled() )
-         return false;
+   g_pProgressDialog->setStayHidden(false);
 
-      tel1 = et.elapsed();
-      et.restart();
-      sumOfLines=0;
-      for ( i=m_diff3LineList.begin(); i!=m_diff3LineList.end(); ++i )
+   bool bPrinting = m_visibleTextWidthForPrinting >= 0;
+
+   if (!m_diff3LineList.empty() && m_pOptions->m_bWordWrap)
+   {
+      Diff3LineList::iterator i;
+      int sumOfLines = 0;
+      for (i = m_diff3LineList.begin(); i != m_diff3LineList.end(); ++i)
       {
          Diff3Line& d3l = *i;
          d3l.sumLinesNeededForDisplay = sumOfLines;
@@ -1642,72 +1681,38 @@ bool KDiff3App::recalcWordWrap(int nofVisibleColumns) // nofVisibleColumns is >=
       }
 
       // Finish the initialisation:
-      if ( m_pDiffTextWindow1 )
+      if (m_pDiffTextWindow1)
       {
-         m_pDiffTextWindow1->recalcWordWrap(true,sumOfLines,nofVisibleColumns, &pp);
-         if ( pp.wasCancelled() )
-            return false;
+         m_pDiffTextWindow1->recalcWordWrap(true, sumOfLines, m_visibleTextWidthForPrinting);
       }
-      if ( m_pDiffTextWindow2 )
+      if (m_pDiffTextWindow2)
       {
-         m_pDiffTextWindow2->recalcWordWrap(true,sumOfLines,nofVisibleColumns, &pp);
-         if ( pp.wasCancelled() )
-            return false;
+         m_pDiffTextWindow2->recalcWordWrap(true, sumOfLines, m_visibleTextWidthForPrinting);
       }
-      if ( m_pDiffTextWindow3 )
+      if (m_pDiffTextWindow3)
       {
-         m_pDiffTextWindow3->recalcWordWrap(true,sumOfLines,nofVisibleColumns, &pp);
-         if ( pp.wasCancelled() )
-            return false;
+         m_pDiffTextWindow3->recalcWordWrap(true, sumOfLines, m_visibleTextWidthForPrinting);
       }
-      pp.step();
-
-      int tel = et.elapsed();
 
       m_neededLines = sumOfLines;
-   }
-   else
-   {
-      m_neededLines = m_diff3LineVector.size();
-      if ( m_pDiffTextWindow1 )
-         m_pDiffTextWindow1->recalcWordWrap(false,0,0,0);
-      if ( m_pDiffTextWindow2 )
-         m_pDiffTextWindow2->recalcWordWrap(false,0,0,0);
-      if ( m_pDiffTextWindow3 )
-         m_pDiffTextWindow3->recalcWordWrap(false,0,0,0);
-   }
-   if (bPrinting)
-      return true;
-
-   if (m_pOverview)
-      m_pOverview->slotRedraw();
-   if ( m_pDiffTextWindow1 )
-   {
-      m_pDiffTextWindow1->setFirstLine( m_pDiffTextWindow1->convertDiff3LineIdxToLine( firstD3LIdx ) );
-      m_pDiffTextWindow1->update();
-   }
-   if ( m_pDiffTextWindow2 )
-   {
-      m_pDiffTextWindow2->setFirstLine( m_pDiffTextWindow2->convertDiff3LineIdxToLine( firstD3LIdx ) );
-      m_pDiffTextWindow2->update();
-   }
-   if ( m_pDiffTextWindow3 )
-   {
-      m_pDiffTextWindow3->setFirstLine( m_pDiffTextWindow3->convertDiff3LineIdxToLine( firstD3LIdx ) );
-      m_pDiffTextWindow3->update();
+      slotStatusMsg(QString());
    }
 
-   if ( m_pDiffVScrollBar )
-      m_pDiffVScrollBar->setRange(0, max2(0, m_neededLines+1 - m_DTWHeight) );
-   if ( m_pDiffTextWindow1 )
+   if (!bPrinting)
    {
-      m_pDiffVScrollBar->setValue( m_pDiffTextWindow1->convertDiff3LineIdxToLine( firstD3LIdx ) );
+      if (m_pOverview)
+         m_pOverview->slotRedraw();
+      if (m_pDiffVScrollBar)
+         m_pDiffVScrollBar->setRange(0, max2(0, m_neededLines + 1 - m_DTWHeight));
+      if (m_pDiffTextWindow1)
+      {
+         m_pDiffVScrollBar->setValue(m_pDiffTextWindow1->convertDiff3LineIdxToLine(m_firstD3LIdx));
 
-      setHScrollBarRange();
-      m_pHScrollBar->setValue(0);
+         setHScrollBarRange();
+         m_pHScrollBar->setValue(0);
+      }
    }
-
-   return true;
+   mainWindowEnable(window(), true);
 }
 
 void KDiff3App::slotShowWhiteSpaceToggled()

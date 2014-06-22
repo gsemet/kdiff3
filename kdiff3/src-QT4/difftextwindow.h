@@ -76,8 +76,8 @@ public:
    void getSelectionRange( int* firstLine, int* lastLine, e_CoordType coordType );
 
    void setPaintingAllowed( bool bAllowPainting );
-   void recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int nofVisibleColumns, ProgressProxy* );
-   void recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth, int cacheListIdx, ProgressProxy* );
+   void recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int nofVisibleColumns);
+   void recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth, int cacheListIdx);
    void print( MyPainter& painter, const QRect& r, int firstLine, int nofLinesPerPage );
 signals:
    void resizeSignal( int nofVisibleColumns, int nofVisibleLines );
@@ -158,6 +158,8 @@ private:
 
    void insertCodec( const QString& visibleCodecName, QTextCodec* pCodec, QList<int> &CodecEnumList, QMenu* pMenu, int currentTextCodecEnum);
 };
+
+void startRunnables();
 
 #endif
 
