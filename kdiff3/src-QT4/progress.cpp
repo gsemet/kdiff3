@@ -15,6 +15,8 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QApplication>
+#include <QThread>
+#include <QStatusBar>
 #include <kio/job.h>
 
 #include <klocale.h>

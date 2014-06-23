@@ -34,8 +34,8 @@
 #include <QUrl>
 #include <QMenu>
 #include <QTextLayout>
-
-
+#include <QRunnable>
+#include <QThreadPool>
 
 #include <klocale.h>
 #include <kfiledialog.h>
