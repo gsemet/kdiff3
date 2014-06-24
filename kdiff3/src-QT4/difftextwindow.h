@@ -80,8 +80,9 @@ public:
    void recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth, int cacheListIdx);
    void print( MyPainter& painter, const QRect& r, int firstLine, int nofLinesPerPage );
 signals:
-   void resizeSignal( int nofVisibleColumns, int nofVisibleLines );
-   void scroll( int deltaX, int deltaY );
+   void resizeHeightChangedSignal(int nofVisibleLines);
+   void resizeWidthChangedSignal(int nofVisibleColumns);
+   void scroll(int deltaX, int deltaY);
    void newSelection();
    void selectionEnd();
    void setFastSelectorLine( int line );

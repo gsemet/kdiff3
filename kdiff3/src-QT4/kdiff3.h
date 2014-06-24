@@ -307,7 +307,9 @@ class KDiff3App : public QSplitter
    Options*      m_pOptions;
    FindDialog*   m_pFindDialog;
 
-   void init( bool bAuto=false, TotalDiffStatus* pTotalDiffStatus=0, bool bLoadFiles=true, bool bUseCurrentEncoding = false);
+   void mainInit( TotalDiffStatus* pTotalDiffStatus=0, bool bLoadFiles=true, bool bUseCurrentEncoding = false);
+   bool m_bFinishMainInit;
+   bool m_bLoadFiles;
 
    virtual bool eventFilter( QObject* o, QEvent* e );
    virtual void resizeEvent(QResizeEvent*);
@@ -335,7 +337,7 @@ class KDiff3App : public QSplitter
    int m_firstD3LIdx;                   // only needed during recalcWordWrap
 
 public slots:
-   void resizeDiffTextWindow(int newWidth, int newHeight);
+   void resizeDiffTextWindowHeight(int newHeight);
    void resizeMergeResultWindow();
    void slotRecalcWordWrap();
    void postRecalcWordWrap();

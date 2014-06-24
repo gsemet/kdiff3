@@ -297,7 +297,9 @@ void ProgressDialog::recalc(bool bUpdate)
       {
          if (m_progressDelayTimer)
             killTimer(m_progressDelayTimer);
-         m_progressDelayTimer = startTimer(3000); /* 3 s delay */
+         m_progressDelayTimer = 0;
+         if ( ! m_bStayHidden )
+            m_progressDelayTimer = startTimer(3000); /* 3 s delay */
 
          int level = m_progressStack.size();
          if ((bUpdate && level == 1) || m_t1.elapsed() > 200)
@@ -389,6 +391,9 @@ void ProgressDialog::hideStatusBarWidget()
 
 void ProgressDialog::delayedHideStatusBarWidget()
 {
+   if (m_progressDelayTimer)
+      killTimer(m_progressDelayTimer);
+   m_progressDelayTimer = 0;
    if (m_pStatusBarWidget)
    {
       m_pStatusBarWidget->hide();

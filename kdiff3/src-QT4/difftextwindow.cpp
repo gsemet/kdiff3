@@ -1289,7 +1289,10 @@ void DiffTextWindow::resizeEvent( QResizeEvent* e )
    QFontMetrics fm = fontMetrics();
    int visibleLines = s.height()/fm.lineSpacing()-2;
    int visibleColumns = s.width()/fm.width('0') - d->leftInfoWidth();
-   emit resizeSignal( visibleColumns, visibleLines );
+   if (e->size().height() != e->oldSize().height())
+      emit resizeHeightChangedSignal(visibleLines);
+   if (e->size().width() != e->oldSize().width())
+      emit resizeWidthChangedSignal(visibleColumns);
    QWidget::resizeEvent(e);
 }
 
@@ -1656,7 +1659,6 @@ void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSiz
          visibleTextWidth-= d->leftInfoWidth() * fontMetrics().width('0');
       int i;
       int wrapLineIdx = 0;
-      int wrapLineCacheIdx = 0;
       int size = d->m_pDiff3LineVector->size();
       //pp.setMaxNofSteps(size);
       int firstD3LineIdx = wrapLineVectorSize > 0 ? 0 : cacheListIdx * 2000;
@@ -1694,7 +1696,7 @@ void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSiz
             int curCount = d->m_wrapLineCacheList[cacheListIdx2].count()-1;
             int l=0;
             while( (cacheListIdx2 < clc
-               || cacheListIdx2 == clc && cacheIdx < cllc) 
+               || ( cacheListIdx2 == clc && cacheIdx < cllc ) )
                && pWrapLineCache->m_d3LineIdx<=i )
             {
                if ( pWrapLineCache->m_d3LineIdx==i )

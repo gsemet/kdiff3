@@ -119,6 +119,12 @@ KDiff3App::KDiff3App(QWidget* pParent, const char* /*name*/, KDiff3Part* pKDiff3
    setOpaqueResize(false); // faster resizing
    setUpdatesEnabled(false);
 
+   // set Disabled to same color as enabled to prevent flicker in DirectoryMergeWindow
+   QPalette pal;
+   pal.setBrush(QPalette::Base, pal.brush(QPalette::Active, QPalette::Base));
+   pal.setColor(QPalette::Text, pal.color(QPalette::Active, QPalette::Text));
+   setPalette(pal);
+
    m_pMainSplitter = 0;
    m_pDirectoryMergeSplitter = 0;
    m_pDirectoryMergeWindow = 0;
@@ -143,6 +149,8 @@ KDiff3App::KDiff3App(QWidget* pParent, const char* /*name*/, KDiff3Part* pKDiff3
    m_pMergeVScrollBar = 0;
    viewToolBar = 0;
    m_bRecalcWordWrapPosted = false;
+   m_bFinishMainInit = false;
+   m_bLoadFiles = false;
 
    // Needed before any file operations via FileAccess happen.
    if (!g_pProgressDialog)
@@ -379,7 +387,7 @@ void KDiff3App::completeInit( const QString& fn1, const QString& fn2, const QStr
    {
       m_pDirectoryMergeSplitter->hide();
 
-      init( m_bAutoMode );
+      mainInit();
       if ( m_bAutoMode )
       {
          SourceData* pSD=0;
