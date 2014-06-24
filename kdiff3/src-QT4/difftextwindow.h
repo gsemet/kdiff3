@@ -160,7 +160,7 @@ private:
    void insertCodec( const QString& visibleCodecName, QTextCodec* pCodec, QList<int> &CodecEnumList, QMenu* pMenu, int currentTextCodecEnum);
 };
 
-void startRunnables();
+bool startRunnables();
 
 #endif
 

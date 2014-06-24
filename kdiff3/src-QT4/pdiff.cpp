@@ -969,7 +969,7 @@ bool KDiff3App::eventFilter( QObject* o, QEvent* e )
             if      ( o == m_pDiffTextWindow1 ) m_sd1.setFileAccess( fa );
             else if ( o == m_pDiffTextWindow2 ) m_sd2.setFileAccess( fa );
             else if ( o == m_pDiffTextWindow3 ) m_sd3.setFileAccess( fa );
-            init();
+            mainInit();
          }
 #endif
       }
@@ -1632,7 +1632,9 @@ void KDiff3App::recalcWordWrap(int visibleTextWidthForPrinting)
       {
          m_pDiffTextWindow3->recalcWordWrap(true, 0, m_visibleTextWidthForPrinting);
       }
-      startRunnables();
+      bool bRunnablesStarted = startRunnables();
+      if ( !bRunnablesStarted )
+         slotFinishRecalcWordWrap();
    }
    else
    {

@@ -1585,20 +1585,29 @@ public:
 
 static QList<QRunnable*> s_runnables;
 
-void startRunnables()
+bool startRunnables()
 {
-   g_pProgressDialog->setStayHidden(true);
-   g_pProgressDialog->push();
-   g_pProgressDialog->setMaxNofSteps(s_runnables.count());
-   s_maxNofRunnables = s_runnables.count();
-   g_pProgressDialog->setInformation(i18n("Word wrap (Cancel disables word wrap)"), false);
-   g_pProgressDialog->setCurrent(0);
-
-   for (int i = 0; i < s_runnables.count(); ++i)
+   if ( s_runnables.count()==0 )
    {
-      QThreadPool::globalInstance()->start(s_runnables[i]);
+      return false;
    }
-   s_runnables.clear();
+   else
+   {
+      g_pProgressDialog->setStayHidden(true);
+      g_pProgressDialog->push();
+      g_pProgressDialog->setMaxNofSteps(s_runnables.count());
+      s_maxNofRunnables = s_runnables.count();
+      g_pProgressDialog->setInformation(i18n("Word wrap (Cancel disables word wrap)"), false);
+      g_pProgressDialog->setCurrent(0);
+
+      for (int i = 0; i < s_runnables.count(); ++i)
+      {
+         QThreadPool::globalInstance()->start(s_runnables[i]);
+      }
+
+      s_runnables.clear();
+      return true;
+   }
 }
 
 

@@ -1278,9 +1278,6 @@ bool FileAccessJobHandler::copyFile( const QString& dest )
       return false;
    }
 
-#if QT_VERSION==230
-   typedef long Q_LONG;
-#endif
    std::vector<char> buffer(100000);
    qint64 bufSize = buffer.size();
    qint64 srcSize = srcFile.size();
