@@ -36,6 +36,7 @@
 #include <QTextLayout>
 #include <QRunnable>
 #include <QThreadPool>
+#include <QMimeData>
 
 #include <klocale.h>
 #include <kfiledialog.h>
@@ -123,7 +124,7 @@ public:
    int m_oldFirstLine;
    int m_horizScrollOffset;
    int m_lineNumberWidth;
-   int m_maxTextWidth;
+   QAtomicInt m_maxTextWidth;
 
    void getLineInfo(
            const Diff3Line& d,
@@ -332,9 +333,11 @@ int DiffTextWindow::getMaxTextWidth()
    {
       d->m_maxTextWidth = 0;
       QFontMetrics fm( fontMetrics() );
-      for( int i = 0; i< d->m_size; ++i )
+      QTextLayout textLayout(QString(), font(), this);
+      for (int i = 0; i< d->m_size; ++i)
       {
-         QTextLayout textLayout( d->getString(i), font(), this );
+         textLayout.clearLayout();
+         textLayout.setText(d->getString(i));
          d->prepareTextLayout( textLayout, true );
          if ( textLayout.maximumWidth() > d->m_maxTextWidth )
             d->m_maxTextWidth = textLayout.maximumWidth();
@@ -946,7 +949,7 @@ void DiffTextWindowData::writeLine(
          {
          case '\n' : lineString[lineString.length()-1] = 0x00B6; break; // "Pilcrow", "paragraph mark"
          case '\r' : lineString[lineString.length()-1] = 0x00A4; break; // Currency sign ;0x2761 "curved stem paragraph sign ornament"
-         case '\0b' : lineString[lineString.length()-1] = 0x2756; break; // some other nice looking character
+         //case '\0b' : lineString[lineString.length()-1] = 0x2756; break; // some other nice looking character
          }
       }
       QVector<UINT8> charChanged( pld->size );
@@ -1551,11 +1554,11 @@ class RecalcWordWrapRunnable : public QRunnable
 {
    DiffTextWindow* m_pDTW;
    DiffTextWindowData* m_pDTWData;
-   int m_nofVisibleColumns;
+   int m_visibleTextWidth;
    int m_cacheIdx;
 public:
-   RecalcWordWrapRunnable( DiffTextWindow* p, DiffTextWindowData* pData, int nofVisibleColumns, int cacheIdx ) 
-      : m_pDTW(p), m_pDTWData(pData), m_nofVisibleColumns(nofVisibleColumns), m_cacheIdx(cacheIdx)
+   RecalcWordWrapRunnable( DiffTextWindow* p, DiffTextWindowData* pData, int visibleTextWidth, int cacheIdx ) 
+      : m_pDTW(p), m_pDTWData(pData), m_visibleTextWidth(visibleTextWidth), m_cacheIdx(cacheIdx)
    {
       setAutoDelete(true);
       //++s_runnableCount; // in Qt>=5.3 only
@@ -1563,7 +1566,7 @@ public:
    }
    void run()
    {
-      m_pDTW->recalcWordWrapHelper(true,0,m_nofVisibleColumns,m_cacheIdx);
+      m_pDTW->recalcWordWrapHelper(0,m_visibleTextWidth,m_cacheIdx);
       // int newValue = --s_runnableCount; // in Qt>=5.3 only
       int newValue = s_runnableCount.fetchAndAddOrdered(-1) - 1;
       g_pProgressDialog->setCurrent(s_maxNofRunnables - s_runnableCount);
@@ -1597,7 +1600,6 @@ bool startRunnables()
       g_pProgressDialog->push();
       g_pProgressDialog->setMaxNofSteps(s_runnables.count());
       s_maxNofRunnables = s_runnables.count();
-      g_pProgressDialog->setInformation(i18n("Word wrap (Cancel disables word wrap)"), false);
       g_pProgressDialog->setCurrent(0);
 
       for (int i = 0; i < s_runnables.count(); ++i)
@@ -1610,10 +1612,11 @@ bool startRunnables()
    }
 }
 
+static const int s_linesPerRunnable = 2000;
 
 void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth )
 {
-   if (d->m_pDiff3LineVector == 0 || /*(wrapLineVectorSize==0 && !d->m_bPaintingAllowed) ||*/ !isVisible())
+   if (d->m_pDiff3LineVector == 0 || !isVisible())
    {
       d->m_bWordWrap = bWordWrap;
       if (!bWordWrap)  d->m_diff3WrapLineVector.resize( 0 );
@@ -1624,7 +1627,6 @@ void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int
 
    if ( bWordWrap )
    {
-      //ProgressProxy pp;
       d->m_lineNumberWidth = d->m_pOptions->m_bShowLineNumbers ? (int)log10((double)qMax(d->m_size,1))+1 : 0;
 
       d->m_diff3WrapLineVector.resize( wrapLineVectorSize );
@@ -1635,7 +1637,7 @@ void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int
       if ( wrapLineVectorSize == 0 )
       {
          d->m_bPaintingAllowed = false;
-         for (int i = 0, j = 0; i<d->m_pDiff3LineVector->size(); i += 2000, ++j)
+         for (int i = 0, j = 0; i<d->m_pDiff3LineVector->size(); i += s_linesPerRunnable, ++j)
          //int i=0;
          {
             d->m_wrapLineCacheList.append(QVector<DiffTextWindowData::WrapLineCacheData>());
@@ -1645,20 +1647,32 @@ void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int
       }
       else
       {
-         recalcWordWrapHelper( bWordWrap, wrapLineVectorSize, visibleTextWidth, 0 );
+         recalcWordWrapHelper( wrapLineVectorSize, visibleTextWidth, 0 );
          d->m_bPaintingAllowed = true;
       }
    }
    else
    {
-      d->m_wrapLineCacheList.clear();
-      d->m_bPaintingAllowed = true;
+      if (wrapLineVectorSize == 0)
+      {
+         d->m_diff3WrapLineVector.resize(0);
+         d->m_wrapLineCacheList.clear();
+         d->m_bPaintingAllowed = false;
+         for (int i = 0, j = 0; i < d->m_pDiff3LineVector->size(); i += s_linesPerRunnable, ++j)
+         {
+            s_runnables.push_back(new RecalcWordWrapRunnable(this, d, visibleTextWidth, j));
+         }
+      }
+      else
+      {
+         d->m_bPaintingAllowed = true;
+      }
    }
 }
 
-void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth, int cacheListIdx )
+void DiffTextWindow::recalcWordWrapHelper( int wrapLineVectorSize, int visibleTextWidth, int cacheListIdx )
 {
-   if ( bWordWrap )
+   if ( d->m_bWordWrap )
    {
       if ( g_pProgressDialog->wasCancelled() )
          return;
@@ -1669,9 +1683,8 @@ void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSiz
       int i;
       int wrapLineIdx = 0;
       int size = d->m_pDiff3LineVector->size();
-      //pp.setMaxNofSteps(size);
-      int firstD3LineIdx = wrapLineVectorSize > 0 ? 0 : cacheListIdx * 2000;
-      int endIdx = wrapLineVectorSize > 0 ? size : qMin(firstD3LineIdx+2000,size);
+      int firstD3LineIdx = wrapLineVectorSize > 0 ? 0 : cacheListIdx * s_linesPerRunnable;
+      int endIdx = wrapLineVectorSize > 0 ? size : qMin(firstD3LineIdx + s_linesPerRunnable, size);
       QVector<DiffTextWindowData::WrapLineCacheData>& wrapLineCache = d->m_wrapLineCacheList[cacheListIdx];
       int cacheListIdx2 = 0;
       QTextLayout textLayout( QString(), font(), this);
@@ -1679,7 +1692,6 @@ void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSiz
       {
          if (g_pProgressDialog->wasCancelled())
             return;
-         //pp.setInformation( i18n("Word wrap"), double(i)/size, false );
 
          int linesNeeded = 0;
          if ( wrapLineVectorSize==0 )
@@ -1691,7 +1703,6 @@ void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSiz
             linesNeeded = textLayout.lineCount();
             for( int l=0; l<linesNeeded; ++l )
             {
-               //Diff3WrapLine* pDiff3WrapLine = &d->m_diff3WrapLineVector[ wrapLineIdx + l ];
                QTextLine line = textLayout.lineAt(l);
                wrapLineCache.push_back( DiffTextWindowData::WrapLineCacheData(i,line.textStart(),line.textLength()) );
             }
@@ -1764,9 +1775,31 @@ void DiffTextWindow::recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSiz
          d->m_pDiffTextWindowFrame->setFirstLine( d->m_firstLine );
       }
    }
-   else
+   else // no word wrap, just calc the maximum text width
    {
-      d->m_diff3WrapLineVector.resize( 0 );
+      int size = d->m_pDiff3LineVector->size();
+      int firstD3LineIdx = cacheListIdx * s_linesPerRunnable;
+      int endIdx = qMin(firstD3LineIdx + s_linesPerRunnable, size);
+
+      int maxTextWidth = d->m_maxTextWidth; // current value
+      QFontMetrics fm(fontMetrics());
+      QTextLayout textLayout(QString(), font(), this);
+      for (int i = firstD3LineIdx; i< endIdx; ++i)
+      {
+         textLayout.clearLayout();
+         textLayout.setText(d->getString(i));
+         d->prepareTextLayout(textLayout, true);
+         if (textLayout.maximumWidth() > maxTextWidth)
+            maxTextWidth = textLayout.maximumWidth();
+      }
+
+      for (;;)
+      {
+         int prevMaxTextWidth = d->m_maxTextWidth.fetchAndStoreOrdered(maxTextWidth);
+         if (prevMaxTextWidth <= maxTextWidth)
+            break;
+         maxTextWidth = prevMaxTextWidth;
+      }
    }
 
    if ( !d->m_selection.isEmpty() && ( !d->m_bWordWrap || wrapLineVectorSize>0 ) )

@@ -25,6 +25,7 @@
 // include files for Qt
 #include <QSplitter>
 #include <QScrollBar>
+#include <QPointer>
 
 // include files for KDE
 #include <kapplication.h>
@@ -335,6 +336,7 @@ class KDiff3App : public QSplitter
 
    int m_visibleTextWidthForPrinting; // only needed during recalcWordWrap
    int m_firstD3LIdx;                   // only needed during recalcWordWrap
+   QPointer<QEventLoop> m_pEventLoopForPrinting;
 
 public slots:
    void resizeDiffTextWindowHeight(int newHeight);
@@ -389,7 +391,7 @@ public slots:
    void slotSelectionStart();
    void slotClipboardChanged();
    void slotOutputModified(bool);
-   void slotAfterFirstPaint();
+   void slotFinishMainInit();
    void slotMergeCurrentFile();
    void slotReload();
    void slotCheckIfCanContinue( bool* pbContinue );

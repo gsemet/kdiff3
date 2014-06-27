@@ -262,7 +262,7 @@ void ProgressDialog::enterEventLoop( KJob* pJob, const QString& jobInfo )
 
    // immediately show the progess dialog for KIO jobs, because some KIO jobs require password authentication,
    // but if the progress dialog pops up at a later moment, this might cover the login dialog and hide it from the user.
-   if( !m_bStayHidden )
+   if( m_pJob && !m_bStayHidden )
       show();
 
    // instead of using exec() the eventloop is entered and exited often without hiding/showing the window.

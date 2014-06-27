@@ -150,6 +150,7 @@ KDiff3App::KDiff3App(QWidget* pParent, const char* /*name*/, KDiff3Part* pKDiff3
    viewToolBar = 0;
    m_bRecalcWordWrapPosted = false;
    m_bFinishMainInit = false;
+   m_pEventLoopForPrinting = 0;
    m_bLoadFiles = false;
 
    // Needed before any file operations via FileAccess happen.
@@ -856,10 +857,13 @@ void KDiff3App::slotFilePrint()
       QRect view3( 2*(columnWidth + columnDistance), view.top(), columnWidth, view.height() );
 
       int linesPerPage = view.height() / fm.lineSpacing();
+      QEventLoop eventLoopForPrinting;
+      m_pEventLoopForPrinting = &eventLoopForPrinting;
       if ( m_pOptions->m_bWordWrap )
       {
          // For printing the lines are wrapped differently (this invalidates the first line)
          recalcWordWrap( columnWidth );
+         m_pEventLoopForPrinting->exec();
       }
 
       int totalNofLines = max2(m_pDiffTextWindow1->getNofLines(), m_pDiffTextWindow2->getNofLines());
@@ -910,9 +914,19 @@ void KDiff3App::slotFilePrint()
 
       int page = 1;
 
+      ProgressProxy pp;
+      pp.setMaxNofSteps(totalNofPages);
       QList<int>::iterator pageListIt = pageList.begin();
       for(;;)
       {
+         pp.setInformation(i18n("Printing page %1 of %2").arg(page).arg(totalNofPages),false);
+         pp.setCurrent(page - 1);
+         if (pp.wasCancelled())
+         {
+            printer.abort();
+            break;
+         }
+
          if (!bPrintSelection)
          {
             if (pageListIt==pageList.end())
@@ -989,6 +1003,7 @@ void KDiff3App::slotFilePrint()
       if ( m_pOptions->m_bWordWrap )
       {
          recalcWordWrap();
+         m_pEventLoopForPrinting->exec();
          m_pDiffVScrollBar->setValue( m_pDiffTextWindow1->convertDiff3LineIdxToLine( currentFirstD3LIdx ) );
       }
 

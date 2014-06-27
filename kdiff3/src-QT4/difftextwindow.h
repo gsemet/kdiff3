@@ -77,7 +77,7 @@ public:
 
    void setPaintingAllowed( bool bAllowPainting );
    void recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int nofVisibleColumns);
-   void recalcWordWrapHelper( bool bWordWrap, int wrapLineVectorSize, int visibleTextWidth, int cacheListIdx);
+   void recalcWordWrapHelper( int wrapLineVectorSize, int visibleTextWidth, int cacheListIdx);
    void print( MyPainter& painter, const QRect& r, int firstLine, int nofLinesPerPage );
 signals:
    void resizeHeightChangedSignal(int nofVisibleLines);
