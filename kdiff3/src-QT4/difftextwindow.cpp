@@ -1653,7 +1653,7 @@ void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int
    }
    else
    {
-      if (wrapLineVectorSize == 0)
+      if (wrapLineVectorSize == 0 && d->m_maxTextWidth<0 )
       {
          d->m_diff3WrapLineVector.resize(0);
          d->m_wrapLineCacheList.clear();
@@ -1777,6 +1777,8 @@ void DiffTextWindow::recalcWordWrapHelper( int wrapLineVectorSize, int visibleTe
    }
    else // no word wrap, just calc the maximum text width
    {
+      if (g_pProgressDialog->wasCancelled())
+         return;
       int size = d->m_pDiff3LineVector->size();
       int firstD3LineIdx = cacheListIdx * s_linesPerRunnable;
       int endIdx = qMin(firstD3LineIdx + s_linesPerRunnable, size);
@@ -1786,6 +1788,8 @@ void DiffTextWindow::recalcWordWrapHelper( int wrapLineVectorSize, int visibleTe
       QTextLayout textLayout(QString(), font(), this);
       for (int i = firstD3LineIdx; i< endIdx; ++i)
       {
+         if (g_pProgressDialog->wasCancelled())
+            return;
          textLayout.clearLayout();
          textLayout.setText(d->getString(i));
          d->prepareTextLayout(textLayout, true);

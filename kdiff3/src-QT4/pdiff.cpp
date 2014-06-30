@@ -552,7 +552,6 @@ void KDiff3App::initView()
    pVSplitter->setOpaqueResize(false);
    pVSplitter->setOrientation( Qt::Vertical );
    pVLayout->addWidget( pVSplitter );
-   pVSplitter->show();
 
    QWidget* pDiffWindowFrame = new QWidget(); // Contains diff windows, overview and vert scrollbar
    pDiffWindowFrame->setObjectName("DiffWindowFrame");
