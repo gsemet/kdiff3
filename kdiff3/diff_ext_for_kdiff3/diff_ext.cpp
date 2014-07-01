@@ -498,7 +498,7 @@ DIFF_EXT::InvokeCommand(LPCMINVOKECOMMANDINFO ici)
              sBits = i18n("(64 Bit)");
          MessageBox( _hwnd, (i18n("Diff-Ext Copyright (c) 2003-2006, Sergey Zorin. All rights reserved.\n")
             + i18n("This software is distributable under the BSD license.\n")
-            + i18n("Some extensions for KDiff3 (c) 2006-2012 by Joachim Eibl.\n")
+            + i18n("Some extensions for KDiff3 (c) 2006-2013 by Joachim Eibl.\n")
             + i18n("Homepage for Diff-Ext: http://diff-ext.sourceforge.net\n")
             + i18n("Homepage for KDiff3: http://kdiff3.sourceforge.net")).c_str()
             , (i18n("About Diff-Ext for KDiff3 ")+sBits).c_str(), MB_OK );
@@ -562,6 +562,10 @@ DIFF_EXT::GetCommandString(UINT_PTR idCmd, UINT uFlags, UINT*, LPSTR pszName, UI
          }
       }
       lstrcpyn( (LPTSTR)pszName, helpString.c_str(), cchMax );
+   }
+   else
+   {
+      ret = E_INVALIDARG;
    }
 
    return ret;

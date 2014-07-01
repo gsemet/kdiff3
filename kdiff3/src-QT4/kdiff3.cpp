@@ -119,6 +119,12 @@ KDiff3App::KDiff3App(QWidget* pParent, const char* /*name*/, KDiff3Part* pKDiff3
    setOpaqueResize(false); // faster resizing
    setUpdatesEnabled(false);
 
+   // set Disabled to same color as enabled to prevent flicker in DirectoryMergeWindow
+   QPalette pal;
+   pal.setBrush(QPalette::Base, pal.brush(QPalette::Active, QPalette::Base));
+   pal.setColor(QPalette::Text, pal.color(QPalette::Active, QPalette::Text));
+   setPalette(pal);
+
    m_pMainSplitter = 0;
    m_pDirectoryMergeSplitter = 0;
    m_pDirectoryMergeWindow = 0;
@@ -143,11 +149,14 @@ KDiff3App::KDiff3App(QWidget* pParent, const char* /*name*/, KDiff3Part* pKDiff3
    m_pMergeVScrollBar = 0;
    viewToolBar = 0;
    m_bRecalcWordWrapPosted = false;
+   m_bFinishMainInit = false;
+   m_pEventLoopForPrinting = 0;
+   m_bLoadFiles = false;
 
    // Needed before any file operations via FileAccess happen.
    if (!g_pProgressDialog)
    {
-      g_pProgressDialog = new ProgressDialog(0);
+      g_pProgressDialog = new ProgressDialog(this,statusBar());
       g_pProgressDialog->setStayHidden( true );
    }
 
@@ -195,8 +204,8 @@ KDiff3App::KDiff3App(QWidget* pParent, const char* /*name*/, KDiff3Part* pKDiff3
          pDialog->resize(600,400);
          pDialog->exec();
 #else
-         fprintf(stderr, "%s\n", title.toLatin1().constData());
-         fprintf(stderr, "%s\n", s.toLatin1().constData());
+         printf( "%s\n", title.toLatin1().constData());
+         printf( "%s\n", s.toLatin1().constData());
 #endif
          exit(1);
       }
@@ -379,7 +388,7 @@ void KDiff3App::completeInit( const QString& fn1, const QString& fn2, const QStr
    {
       m_pDirectoryMergeSplitter->hide();
 
-      init( m_bAutoMode );
+      mainInit();
       if ( m_bAutoMode )
       {
          SourceData* pSD=0;
@@ -848,10 +857,13 @@ void KDiff3App::slotFilePrint()
       QRect view3( 2*(columnWidth + columnDistance), view.top(), columnWidth, view.height() );
 
       int linesPerPage = view.height() / fm.lineSpacing();
+      QEventLoop eventLoopForPrinting;
+      m_pEventLoopForPrinting = &eventLoopForPrinting;
       if ( m_pOptions->m_bWordWrap )
       {
          // For printing the lines are wrapped differently (this invalidates the first line)
          recalcWordWrap( columnWidth );
+         m_pEventLoopForPrinting->exec();
       }
 
       int totalNofLines = max2(m_pDiffTextWindow1->getNofLines(), m_pDiffTextWindow2->getNofLines());
@@ -902,9 +914,19 @@ void KDiff3App::slotFilePrint()
 
       int page = 1;
 
+      ProgressProxy pp;
+      pp.setMaxNofSteps(totalNofPages);
       QList<int>::iterator pageListIt = pageList.begin();
       for(;;)
       {
+         pp.setInformation(i18n("Printing page %1 of %2").arg(page).arg(totalNofPages),false);
+         pp.setCurrent(page - 1);
+         if (pp.wasCancelled())
+         {
+            printer.abort();
+            break;
+         }
+
          if (!bPrintSelection)
          {
             if (pageListIt==pageList.end())
@@ -981,6 +1003,7 @@ void KDiff3App::slotFilePrint()
       if ( m_pOptions->m_bWordWrap )
       {
          recalcWordWrap();
+         m_pEventLoopForPrinting->exec();
          m_pDiffVScrollBar->setValue( m_pDiffTextWindow1->convertDiff3LineIdxToLine( currentFirstD3LIdx ) );
       }
 

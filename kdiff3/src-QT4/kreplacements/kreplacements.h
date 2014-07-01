@@ -482,6 +482,7 @@ public:
    KIconLoader* iconLoader();
    KConfigGroup* config();
    bool isRestored();
+   void parseOptions();
 };
 
 extern KApplication* kapp;

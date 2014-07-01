@@ -229,12 +229,29 @@ void FileAccess::setFile( const QFileInfo& fi, FileAccess* pParent )
       //d()->m_modificationTime = fi.lastModified();
       //d()->m_accessTime = fi.lastRead();
       d()->m_name       = fi.fileName();
-      if ( m_bSymLink ) 
+      if ( m_bSymLink )
+      {
+#ifdef _WIN32
          d()->m_linkTarget = fi.readLink();
+#else
+         // Unfortunately Qt4 readLink always returns an absolute path, even if the link is relative
+         char s[PATH_MAX+1];
+         int len = readlink(QFile::encodeName(fi.absoluteFilePath()).constData(), s, PATH_MAX);
+         if ( len>0 )
+         {
+            s[len] = '\0';
+            d()->m_linkTarget = QFile::decodeName(s);
+         }
+         else
+         {
+            d()->m_linkTarget = fi.readLink();
+         }
+#endif
+      }
       d()->m_bLocal = true;
       d()->m_bValidData = true;
       d()->m_url = KUrl( fi.filePath() );
-      if ( ! d()->m_url.isValid() )
+      if ( d()->m_url.isRelative() )
       {
          d()->m_url.setPath( absoluteFilePath() );
       }
@@ -499,7 +516,7 @@ KUrl FileAccess::url() const
    else
    {
       KUrl url( m_filePath );
-      if ( ! url.isValid() )
+      if ( url.isRelative() )
       {
          url.setPath( absoluteFilePath() );
       }
@@ -571,6 +588,9 @@ QString FileAccess::absoluteFilePath() const
       if ( m_filePath.isEmpty() )
 	 return QString();
       
+      if ( ! isLocal() )
+         return m_filePath; // return complete url
+
       QFileInfo fi( m_filePath );
       if ( fi.isAbsolute() )
 	 return m_filePath;
@@ -670,6 +690,7 @@ static bool interruptableReadFile( QFile& f, void* pDestBuffer, unsigned long ma
    ProgressProxy pp;
    const unsigned long maxChunkSize = 100000;
    unsigned long i=0;
+   pp.setMaxNofSteps( maxLength / maxChunkSize + 1 );
    while( i<maxLength )
    {
       unsigned long nextLength = min2( maxLength-i, maxChunkSize );
@@ -681,7 +702,8 @@ static bool interruptableReadFile( QFile& f, void* pDestBuffer, unsigned long ma
       i+=reallyRead;
 
       pp.setCurrent( double(i)/maxLength );
-      if ( pp.wasCancelled() ) return false;
+      if ( pp.wasCancelled() ) 
+         return false;
    }
    return true;
 }
@@ -718,6 +740,7 @@ bool FileAccess::writeFile( const void* pSrcBuffer, unsigned long length )
       if ( f.open( QIODevice::WriteOnly ) )
       {
          const unsigned long maxChunkSize = 100000;
+         pp.setMaxNofSteps( length / maxChunkSize + 1 );
          unsigned long i=0;
          while( i<length )
          {
@@ -729,8 +752,9 @@ bool FileAccess::writeFile( const void* pSrcBuffer, unsigned long length )
             }
             i+=reallyWritten;
 
-            pp.setCurrent( double(i)/length );
-            if ( pp.wasCancelled() ) return false;
+            pp.step();
+            if ( pp.wasCancelled() ) 
+               return false;
          }
          f.close();
 #ifndef _WIN32
@@ -824,7 +848,7 @@ QString FileAccess::tempFileName()
             break;
          }
       }
-      return QDir::convertSeparators(fileName+".2");
+      return QDir::toNativeSeparators(fileName+".2");
 
    #else  // using KDE
 
@@ -1180,7 +1204,7 @@ bool FileAccessJobHandler::rename( const QString& dest )
       return false;
 
    KUrl kurl( dest );
-   if ( !kurl.isValid() )
+   if ( kurl.isRelative() )
       kurl = KUrl( QDir().absoluteFilePath(dest) ); // assuming that invalid means relative
 
    if ( m_pFileAccess->isLocal() && kurl.isLocalFile() )
@@ -1254,9 +1278,6 @@ bool FileAccessJobHandler::copyFile( const QString& dest )
       return false;
    }
 
-#if QT_VERSION==230
-   typedef long Q_LONG;
-#endif
    std::vector<char> buffer(100000);
    qint64 bufSize = buffer.size();
    qint64 srcSize = srcFile.size();
@@ -1786,12 +1807,12 @@ void FileAccessJobHandler::slotListDirProcessNewEntries( KIO::Job*, const KIO::U
 
 void ProgressProxyExtender::slotListDirInfoMessage( KJob*, const QString& msg )
 {
-   setInformation( msg, 0.0 );
+   setInformation( msg, 0 );
 }
 
 void ProgressProxyExtender::slotPercent( KJob*, unsigned long percent )
 {
-   setCurrent( percent/100.0 );
+   setCurrent( percent );
 }
 
 

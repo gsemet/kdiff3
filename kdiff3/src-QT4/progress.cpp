@@ -15,15 +15,19 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QApplication>
+#include <QThread>
+#include <QStatusBar>
 #include <kio/job.h>
 
 #include <klocale.h>
 
 ProgressDialog* g_pProgressDialog=0;
 
-ProgressDialog::ProgressDialog( QWidget* pParent )
-: QDialog( pParent )
+ProgressDialog::ProgressDialog( QWidget* pParent, QStatusBar* pStatusBar )
+: QDialog(pParent), m_pStatusBar(pStatusBar)
 {
+   m_pGuiThread = QThread::currentThread();
+
    setObjectName("ProgressDialog");
    m_bStayHidden = false;
    setModal(true);
@@ -53,17 +57,62 @@ ProgressDialog::ProgressDialog( QWidget* pParent )
    hlayout->addWidget( m_pAbortButton );
    connect( m_pAbortButton, SIGNAL(clicked()), this, SLOT(slotAbort()) );
 
+   if (m_pStatusBar)
+   {
+      m_pStatusBarWidget = new QWidget;
+      QHBoxLayout* pStatusBarLayout = new QHBoxLayout(m_pStatusBarWidget);
+      pStatusBarLayout->setMargin(0);
+      pStatusBarLayout->setSpacing(3);
+      m_pStatusProgressBar = new QProgressBar;
+      m_pStatusProgressBar->setRange(0, 1000);
+      m_pStatusProgressBar->setTextVisible(false);
+      m_pStatusAbortButton = new QPushButton( i18n("&Cancel") );
+      connect(m_pStatusAbortButton, SIGNAL(clicked()), this, SLOT(slotAbort()));
+      pStatusBarLayout->addWidget(m_pStatusProgressBar);
+      pStatusBarLayout->addWidget(m_pStatusAbortButton);
+      m_pStatusBar->addPermanentWidget(m_pStatusBarWidget,0);
+      m_pStatusBarWidget->setFixedHeight(m_pStatusBar->height());
+      m_pStatusBarWidget->hide();
+   }
+   else
+   {
+      m_pStatusProgressBar = 0;
+      m_pStatusAbortButton = 0;
+   }
+
    m_progressDelayTimer = 0;
-   resize( 400, 100 );
+   m_delayedHideTimer = 0;
+   m_delayedHideStatusBarWidgetTimer = 0;
+   resize(400, 100);
    m_t1.start();
    m_t2.start();
    m_bWasCancelled = false;
+   m_eCancelReason = eUserAbort;
    m_pJob = 0;
 }
 
 void ProgressDialog::setStayHidden( bool bStayHidden )
 {
-   m_bStayHidden = bStayHidden;
+   if (m_bStayHidden != bStayHidden)
+   {
+      m_bStayHidden = bStayHidden;
+      if (m_pStatusBarWidget)
+      {
+         if (m_bStayHidden)
+         {
+            if (m_delayedHideStatusBarWidgetTimer)
+            {
+               killTimer(m_delayedHideStatusBarWidgetTimer);
+               m_delayedHideStatusBarWidgetTimer = 0;
+            }
+            m_pStatusBarWidget->show();
+         }
+         else
+            hideStatusBarWidget();  // delayed
+      }
+      if ( isVisible() && m_bStayHidden )
+         hide();  // delayed hide
+   }
 }
 
 void ProgressDialog::push()
@@ -91,24 +140,28 @@ void ProgressDialog::pop( bool bRedrawUpdate )
    if ( !m_progressStack.empty() )
    {
       m_progressStack.pop_back();
-      if ( m_progressStack.empty() )
+      if (m_progressStack.empty())
+      {
          hide();
+      }
       else
          recalc(bRedrawUpdate);
    }
 }
 
-void ProgressDialog::setInformation(const QString& info, double dCurrent, bool bRedrawUpdate )
+void ProgressDialog::setInformation(const QString& info, int current, bool bRedrawUpdate )
 {
    if ( m_progressStack.empty() )
       return;
    ProgressLevelData& pld = m_progressStack.back();
-   pld.m_dCurrent = dCurrent;
+   pld.m_current = current;
    int level = m_progressStack.size();
    if ( level==1 )
    {
       m_pInformation->setText( info );
       m_pSubInformation->setText("");
+      if (m_pStatusBar && m_bStayHidden)
+         m_pStatusBar->showMessage(info);
    }
    else if ( level==2 )
    {
@@ -127,6 +180,8 @@ void ProgressDialog::setInformation(const QString& info, bool bRedrawUpdate )
    {
       m_pInformation->setText( info );
       m_pSubInformation->setText( "" );
+      if (m_pStatusBar && m_bStayHidden)
+         m_pStatusBar->showMessage(info);
    }
    else if ( level==2 )
    {
@@ -141,7 +196,15 @@ void ProgressDialog::setMaxNofSteps( int maxNofSteps )
       return;
    ProgressLevelData& pld = m_progressStack.back();
    pld.m_maxNofSteps = maxNofSteps;
-   pld.m_dCurrent = 0;
+   pld.m_current = 0;
+}
+
+void ProgressDialog::addNofSteps( int nofSteps )
+{
+   if ( m_progressStack.empty() )
+      return;
+   ProgressLevelData& pld = m_progressStack.back();
+   pld.m_maxNofSteps.fetchAndAddRelaxed( nofSteps );
 }
 
 void ProgressDialog::step( bool bRedrawUpdate )
@@ -149,16 +212,16 @@ void ProgressDialog::step( bool bRedrawUpdate )
    if ( m_progressStack.empty() )
       return;
    ProgressLevelData& pld = m_progressStack.back();
-   pld.m_dCurrent += 1.0/pld.m_maxNofSteps;
+   pld.m_current.fetchAndAddRelaxed(1);
    recalc(bRedrawUpdate);
 }
 
-void ProgressDialog::setCurrent( double dSubCurrent, bool bRedrawUpdate )
+void ProgressDialog::setCurrent( int subCurrent, bool bRedrawUpdate )
 {
    if ( m_progressStack.empty() )
       return;
    ProgressLevelData& pld = m_progressStack.back();
-   pld.m_dCurrent = dSubCurrent;
+   pld.m_current = subCurrent;
    recalc( bRedrawUpdate );
 }
 
@@ -173,7 +236,7 @@ void ProgressDialog::setRangeTransformation( double dMin, double dMax )
    ProgressLevelData& pld = m_progressStack.back();
    pld.m_dRangeMin = dMin;
    pld.m_dRangeMax = dMax;
-   pld.m_dCurrent = 0;
+   pld.m_current = 0;
 }
 
 void ProgressDialog::setSubRangeTransformation( double dMin, double dMax )
@@ -191,11 +254,16 @@ void qt_leave_modal(QWidget*);
 void ProgressDialog::enterEventLoop( KJob* pJob, const QString& jobInfo )
 {
    m_pJob = pJob;
-   m_pSlowJobInfo->setText("");
    m_currentJobInfo = jobInfo;
+   m_pSlowJobInfo->setText( m_currentJobInfo );
    if ( m_progressDelayTimer )
       killTimer( m_progressDelayTimer );
    m_progressDelayTimer = startTimer( 3000 ); /* 3 s delay */
+
+   // immediately show the progess dialog for KIO jobs, because some KIO jobs require password authentication,
+   // but if the progress dialog pops up at a later moment, this might cover the login dialog and hide it from the user.
+   if( m_pJob && !m_bStayHidden )
+      show();
 
    // instead of using exec() the eventloop is entered and exited often without hiding/showing the window.
    //qt_enter_modal(this);
@@ -217,35 +285,60 @@ void ProgressDialog::exitEventLoop()
       m_eventLoopStack.back()->exit();
 }
 
-void ProgressDialog::recalc( bool bUpdate )
+inline int getAtomic(QAtomicInt& ai)
 {
-   if ( m_progressDelayTimer )
-      killTimer( m_progressDelayTimer );
-   m_progressDelayTimer = startTimer( 3000 ); /* 3 s delay */
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
+   return ai.load();
+#else
+   return ai;
+#endif
+}
 
-   int level = m_progressStack.size();
-   if( ( bUpdate && level==1) || m_t1.elapsed()>200 )
+void ProgressDialog::recalc(bool bUpdate)
+{
+   if (!m_bWasCancelled)
    {
-      if (m_progressStack.empty() )
+      if (QThread::currentThread() == m_pGuiThread)
       {
-         m_pProgressBar->setValue( 0 );
-         m_pSubProgressBar->setValue( 0 );
+         if (m_progressDelayTimer)
+            killTimer(m_progressDelayTimer);
+         m_progressDelayTimer = 0;
+         if ( ! m_bStayHidden )
+            m_progressDelayTimer = startTimer(3000); /* 3 s delay */
+
+         int level = m_progressStack.size();
+         if ((bUpdate && level == 1) || m_t1.elapsed() > 200)
+         {
+            if (m_progressStack.empty())
+            {
+               m_pProgressBar->setValue(0);
+               m_pSubProgressBar->setValue(0);
+            }
+            else
+            {
+               QList<ProgressLevelData>::iterator i = m_progressStack.begin();
+               int value = int(1000.0 * (getAtomic(i->m_current) * (i->m_dRangeMax - i->m_dRangeMin) / getAtomic(i->m_maxNofSteps) + i->m_dRangeMin));
+               m_pProgressBar->setValue(value);
+               if (m_bStayHidden && m_pStatusProgressBar)
+                  m_pStatusProgressBar->setValue(value);
+
+               ++i;
+               if (i != m_progressStack.end())
+                  m_pSubProgressBar->setValue(int(1000.0 * (getAtomic(i->m_current) * (i->m_dRangeMax - i->m_dRangeMin) / getAtomic(i->m_maxNofSteps) + i->m_dRangeMin)));
+               else
+                  m_pSubProgressBar->setValue(int(1000.0 * m_progressStack.front().m_dSubRangeMin));
+            }
+
+            if (!m_bStayHidden && !isVisible())
+               show();
+            qApp->processEvents();
+            m_t1.restart();
+         }
       }
       else
       {
-         QList<ProgressLevelData>::iterator i = m_progressStack.begin();
-         m_pProgressBar->setValue( int( 1000.0 * ( i->m_dCurrent * (i->m_dRangeMax - i->m_dRangeMin) + i->m_dRangeMin ) ) );
-         ++i;
-         if ( i!=m_progressStack.end() )
-            m_pSubProgressBar->setValue( int( 1000.0 * ( i->m_dCurrent * (i->m_dRangeMax - i->m_dRangeMin) + i->m_dRangeMin ) ) );
-         else
-            m_pSubProgressBar->setValue( int( 1000.0 * m_progressStack.front().m_dSubRangeMin ) );
+         QMetaObject::invokeMethod(this, "recalc", Qt::QueuedConnection, Q_ARG(bool, bUpdate));
       }
-
-      if ( !m_bStayHidden && !isVisible() )
-         show();
-      qApp->processEvents();
-      m_t1.restart();
    }
 }
 
@@ -255,7 +348,10 @@ void ProgressDialog::show()
 {
    if ( m_progressDelayTimer )
       killTimer( m_progressDelayTimer );
+   if ( m_delayedHideTimer )
+      killTimer( m_delayedHideTimer );
    m_progressDelayTimer = 0;
+   m_delayedHideTimer = 0;
    if ( !isVisible() && (parentWidget()==0 || parentWidget()->isVisible()) )
    {
       QDialog::show();
@@ -268,7 +364,9 @@ void ProgressDialog::hide()
       killTimer( m_progressDelayTimer );
    m_progressDelayTimer = 0;
    // Calling QDialog::hide() directly doesn't always work. (?)
-   QTimer::singleShot( 100, this, SLOT(delayedHide()) );
+   if (m_delayedHideTimer)
+      killTimer(m_delayedHideTimer);
+   m_delayedHideTimer = startTimer(100);
 }
 
 void ProgressDialog::delayedHide()
@@ -289,9 +387,30 @@ void ProgressDialog::delayedHide()
    m_pSlowJobInfo->setText("");
 }
 
+void ProgressDialog::hideStatusBarWidget()
+{
+   if (m_delayedHideStatusBarWidgetTimer)
+      killTimer(m_delayedHideStatusBarWidgetTimer);
+   m_delayedHideStatusBarWidgetTimer = startTimer(100);
+}
+
+void ProgressDialog::delayedHideStatusBarWidget()
+{
+   if (m_progressDelayTimer)
+      killTimer(m_progressDelayTimer);
+   m_progressDelayTimer = 0;
+   if (m_pStatusBarWidget)
+   {
+      m_pStatusBarWidget->hide();
+      m_pStatusProgressBar->setValue(0);
+      m_pStatusBar->clearMessage();
+   }
+}
+
+
 void ProgressDialog::reject()
 {
-   m_bWasCancelled = true;
+   cancel(eUserAbort);
    QDialog::reject();
 }
 
@@ -302,22 +421,58 @@ void ProgressDialog::slotAbort()
 
 bool ProgressDialog::wasCancelled()
 {
-   if( m_t2.elapsed()>100 )
+   if ( QThread::currentThread() == m_pGuiThread )
    {
-      qApp->processEvents();
-      m_t2.restart();
+      if( m_t2.elapsed()>100 )
+      {
+         qApp->processEvents();
+         m_t2.restart();
+      }
    }
    return m_bWasCancelled;
 }
 
-
-void ProgressDialog::timerEvent(QTimerEvent*)
+void ProgressDialog::clearCancelState()
 {
-   if( !isVisible() )
+   m_bWasCancelled = false;
+}
+
+void ProgressDialog::cancel(e_CancelReason eCancelReason)
+{
+   if ( !m_bWasCancelled)
    {
-      show();
+      m_bWasCancelled = true;
+      m_eCancelReason = eCancelReason;
    }
-   m_pSlowJobInfo->setText( m_currentJobInfo );
+}
+
+ProgressDialog::e_CancelReason ProgressDialog::cancelReason()
+{
+   return m_eCancelReason;
+}
+
+void ProgressDialog::timerEvent(QTimerEvent* te )
+{
+   if ( te->timerId() == m_progressDelayTimer )
+   {
+      if( !isVisible() && !m_bStayHidden )
+      {
+         show();
+      }
+      m_pSlowJobInfo->setText( m_currentJobInfo );
+   }
+   else if (te->timerId() == m_delayedHideTimer)
+   {
+      killTimer(m_delayedHideTimer);
+      m_delayedHideTimer = 0;
+      delayedHide();
+   }
+   else if (te->timerId() == m_delayedHideStatusBarWidgetTimer)
+   {
+      killTimer(m_delayedHideStatusBarWidgetTimer);
+      m_delayedHideStatusBarWidgetTimer = 0;
+      delayedHideStatusBarWidget();
+   }
 }
 
 
@@ -351,14 +506,14 @@ void ProgressProxy::setInformation( const QString& info, bool bRedrawUpdate )
    g_pProgressDialog->setInformation( info, bRedrawUpdate );
 }
 
-void ProgressProxy::setInformation( const QString& info, double dCurrent, bool bRedrawUpdate )
+void ProgressProxy::setInformation( const QString& info, int current, bool bRedrawUpdate )
 {
-   g_pProgressDialog->setInformation( info, dCurrent, bRedrawUpdate );
+   g_pProgressDialog->setInformation( info, current, bRedrawUpdate );
 }
 
-void ProgressProxy::setCurrent( double dCurrent, bool bRedrawUpdate  )
+void ProgressProxy::setCurrent( int current, bool bRedrawUpdate  )
 {
-   g_pProgressDialog->setCurrent( dCurrent, bRedrawUpdate );
+   g_pProgressDialog->setCurrent( current, bRedrawUpdate );
 }
 
 void ProgressProxy::step( bool bRedrawUpdate )
@@ -369,6 +524,11 @@ void ProgressProxy::step( bool bRedrawUpdate )
 void ProgressProxy::setMaxNofSteps( int maxNofSteps )
 {
    g_pProgressDialog->setMaxNofSteps( maxNofSteps );
+}
+
+void ProgressProxy::addNofSteps( int nofSteps )
+{
+   g_pProgressDialog->addNofSteps( nofSteps );
 }
 
 bool ProgressProxy::wasCancelled()
@@ -386,4 +546,8 @@ void ProgressProxy::setSubRangeTransformation( double dMin, double dMax )
    g_pProgressDialog->setSubRangeTransformation( dMin, dMax );
 }
 
+void ProgressProxy::recalc()
+{
+   g_pProgressDialog->recalc(true);
+}
 

@@ -19,14 +19,23 @@
 //
 //////////////////////////////////////////////////////////////////////
 #ifdef _WIN32
+#include "stable.h"
+
 #include <windows.h>
+
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8 ) /* Test for GCC > 4.8.0 */
+#define INITGUID     // needed for MinGW 4.8 otherwise IID_IContextMenu etc. produce undefined references during linking.
+#include <guiddef.h>
+#endif
+
 #include <shlobj.h>
+#include <shlguid.h>
 #include <malloc.h>
-#include <QString>
-#include <QStringList>
-#include <qwidget.h>
-#include <QDir>
-#include <QMenu>
+//#include <QString>
+//#include <QStringList>
+//#include <qwidget.h>
+//#include <QDir>
+//#include <QMenu>
 #include "ShellContextMenu.h"
 
 #ifdef _DEBUG
@@ -149,7 +158,7 @@ LRESULT CALLBACK CShellContextMenu::HookWndProc(HWND hWnd, UINT message, WPARAM 
 
 UINT CShellContextMenu::ShowContextMenu(QWidget * pParentWidget, QPoint pt, QMenu* pMenu )
 {
-        HWND hWnd = pParentWidget->winId();
+        HWND hWnd = (HWND)pParentWidget->winId();
         int iMenuType = 0;	// to know which version of IContextMenu is supported
 	LPCONTEXTMENU pContextMenu;	// common pointer to IContextMenu and higher version interface
    
@@ -188,7 +197,7 @@ UINT CShellContextMenu::ShowContextMenu(QWidget * pParentWidget, QPoint pt, QMen
 	else
 		OldWndProc = NULL;
 
-	UINT idCommand = TrackPopupMenu (m_hMenu,TPM_RETURNCMD | TPM_LEFTALIGN, pt.x(), pt.y(), 0, pParentWidget->winId(), 0);
+	UINT idCommand = TrackPopupMenu (m_hMenu,TPM_RETURNCMD | TPM_LEFTALIGN, pt.x(), pt.y(), 0, (HWND)pParentWidget->winId(), 0);
 
 	if (OldWndProc) // unsubclass
         SetWindowLongPtr (hWnd, GWLP_WNDPROC, (DWORD_PTR) OldWndProc);

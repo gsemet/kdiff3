@@ -84,7 +84,7 @@ static void showHelp()
 
 #ifndef Q_OS_OS2
       char buf[256];
-      HINSTANCE hi = FindExecutableA( helpFile.fileName().toAscii(), helpFile.absolutePath().toAscii(), buf );
+      HINSTANCE hi = FindExecutableA( helpFile.fileName().toLatin1(), helpFile.absolutePath().toLatin1(), buf );
       if ( (quintptr)hi<=32 )
       {
 #endif
@@ -119,6 +119,7 @@ static void showHelp()
 QString getTranslationDir(const QString& locale)
 {
    #if defined(_WIN32) || defined(Q_OS_OS2)
+      (void) locale; 
       QString exePath;
       exePath = QCoreApplication::applicationDirPath();
       return exePath+"/translations";
@@ -1012,10 +1013,16 @@ bool KCmdLineArgs::isSet(const QString& s)
 KApplication* kapp;
 
 KApplication::KApplication()
-: QApplication( s_argc,s_argv )
+: QApplication(s_argc, s_argv)
 {
    kapp = this;
+   #if ! ( defined(_WIN32) || defined(Q_OS_OS2) )
+   parseOptions();
+   #endif
+}
 
+void KApplication::parseOptions()
+{
    //setStyle( new QWindowsStyle ); // doesn't show checkmarks on checkable icons in menu
 
    int nofOptions=0;
@@ -1207,9 +1214,9 @@ QObject* KLibFactory::create(QObject* pParent, const QString& name, const QStrin
 {
    KParts::Factory* f = qobject_cast<KParts::Factory*>(this);
    if (f!=0)
-      return f->createPartObject( (QWidget*)pParent, name.toAscii(),
-                                            pParent, name.toAscii(),
-                                            classname.toAscii(),  QStringList() );
+      return f->createPartObject( (QWidget*)pParent, name.toLatin1(),
+                                            pParent, name.toLatin1(),
+                                            classname.toLatin1(),  QStringList() );
    else
       return 0;
 }

@@ -34,7 +34,7 @@
 #include <QLabel>
 #include <QSplitter>
 #include <QTextEdit>
-#include <QItemDelegate>
+#include <QStyledItemDelegate>
 #include <QPushButton>
 #include <algorithm>
 
@@ -602,13 +602,13 @@ QVariant DirectoryMergeWindow::Data::headerData ( int section, Qt::Orientation o
 }
 
 // Previously  Q3ListViewItem::paintCell(p,cg,column,width,align);
-class DirectoryMergeWindow::DirMergeItemDelegate : public QItemDelegate
+class DirectoryMergeWindow::DirMergeItemDelegate : public QStyledItemDelegate
 {
    DirectoryMergeWindow* m_pDMW;
    DirectoryMergeWindow::Data* d;
 public:
    DirMergeItemDelegate(DirectoryMergeWindow* pParent) 
-      : QItemDelegate(pParent), m_pDMW(pParent), d(pParent->d)
+      : QStyledItemDelegate(pParent), m_pDMW(pParent), d(pParent->d)
    {
    }
    void paint( QPainter * p, const QStyleOptionViewItem & option, const QModelIndex & index ) const 
@@ -672,11 +672,11 @@ public:
       {
          option2.displayAlignment = Qt::AlignRight;
       }
-      QItemDelegate::paint( p, option2, index );
+      QStyledItemDelegate::paint( p, option2, index );
    }
    QSize sizeHint( const QStyleOptionViewItem & option, const QModelIndex & index ) const 
    {
-      QSize sz = QItemDelegate::sizeHint( option, index );
+      QSize sz = QStyledItemDelegate::sizeHint( option, index );
       return sz.expandedTo( QSize(0,18) );
    }
 };
@@ -806,6 +806,8 @@ bool DirectoryMergeWindow::Data::fastFileComparison(
    t_FileSize fullSize = file1.size();
    t_FileSize sizeLeft = fullSize;
 
+   pp.setMaxNofSteps( fullSize / buf1.size() );
+
    while( sizeLeft>0 && ! pp.wasCancelled() )
    {
       int len = min2( sizeLeft, (t_FileSize)buf1.size() );
@@ -827,7 +829,8 @@ bool DirectoryMergeWindow::Data::fastFileComparison(
          return bEqual;
       }
       sizeLeft-=len;
-      pp.setCurrent(double(fullSize-sizeLeft)/fullSize, false );
+      //pp.setCurrent(double(fullSize-sizeLeft)/fullSize, false );
+      pp.step();
    }
 
    // If the program really arrives here, then the files are really equal.
@@ -995,10 +998,11 @@ bool DirectoryMergeWindow::Data::init
    m_bUnfoldSubdirs = m_pOptions->m_bDmUnfoldSubdirs;
    m_bSkipDirStatus = m_pOptions->m_bDmSkipDirStatus;
 
+   
+   beginResetModel();
    m_pRoot->m_children.clear();
-
    m_mergeItemList.clear();
-   reset();
+   endResetModel();
    
    m_currentIndexForOperation = m_mergeItemList.end();
 
@@ -1782,7 +1786,8 @@ void DirectoryMergeWindow::Data::prepareListView( ProgressProxy& pp )
 
       setPixmaps( mfi, bCheckC );
    }
-   reset();
+   beginResetModel();
+   endResetModel();
 }
 
 static bool conflictingFileTypes(MergeFileInfos& mfi)
@@ -2219,8 +2224,9 @@ static void sortHelper( MergeFileInfos* pMFI, int sortColumn, Qt::SortOrder orde
 
 void DirectoryMergeWindow::Data::sort( int column, Qt::SortOrder order )
 {
+   beginResetModel();
    sortHelper( m_pRoot, column, order );
-   reset();
+   endResetModel();
 }
 
 //
@@ -2644,6 +2650,8 @@ void DirectoryMergeWindow::Data::mergeContinue(bool bStart, bool bVerbose)
       m_bError = false;
    }
 
+   pp.setMaxNofSteps( nrOfItems );
+
    bool bSuccess = true;
    bool bSingleFileMerge = false;
    bool bSim = m_bSimulatedMergeStarted;
@@ -2752,7 +2760,7 @@ void DirectoryMergeWindow::Data::mergeContinue(bool bStart, bool bVerbose)
       MergeFileInfos& mfi = *getMFI(miCurrent);
 
       pp.setInformation( mfi.subPath(),
-         bSim ? double(nrOfCompletedSimItems)/nrOfItems : double(nrOfCompletedItems)/nrOfItems,
+         bSim ? nrOfCompletedSimItems : nrOfCompletedItems,
          false // bRedrawUpdate
          );
 
@@ -3482,7 +3490,7 @@ void DirectoryMergeWindow::updateAvailabilities( bool bDirCompare, bool bDiffWin
    d->m_pDirCurrentSyncCopyBToA->setEnabled( bItemActive && !bMergeMode && pMFI->existsInB() );
    d->m_pDirCurrentSyncDeleteA->setEnabled( bItemActive && !bMergeMode && pMFI->existsInA() );
    d->m_pDirCurrentSyncDeleteB->setEnabled( bItemActive && !bMergeMode && pMFI->existsInB() );
-   d->m_pDirCurrentSyncDeleteAAndB->setEnabled( bItemActive && !bMergeMode && pMFI->existsInB() && pMFI->existsInB() );
+   d->m_pDirCurrentSyncDeleteAAndB->setEnabled( bItemActive && !bMergeMode && pMFI->existsInA() && pMFI->existsInB() );
    d->m_pDirCurrentSyncMergeToA->setEnabled( bItemActive && !bMergeMode && !bFTConflict );
    d->m_pDirCurrentSyncMergeToB->setEnabled( bItemActive && !bMergeMode && !bFTConflict );
    d->m_pDirCurrentSyncMergeToAAndB->setEnabled( bItemActive && !bMergeMode && !bFTConflict );
