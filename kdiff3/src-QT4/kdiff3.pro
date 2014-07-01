@@ -72,3 +72,5 @@ unix {
   target.path = /usr/local/bin
   INSTALLS += target
 }
+
+macx:LIBS += -framework Foundation
