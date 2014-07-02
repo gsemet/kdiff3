@@ -329,7 +329,7 @@ int DiffTextWindow::getMaxTextWidth()
    {
       return getVisibleTextAreaWidth();
    }
-   else if ( d->m_maxTextWidth < 0 )
+   else if ( getAtomic( d->m_maxTextWidth ) < 0 )
    {
       d->m_maxTextWidth = 0;
       QFontMetrics fm( fontMetrics() );
@@ -339,11 +339,11 @@ int DiffTextWindow::getMaxTextWidth()
          textLayout.clearLayout();
          textLayout.setText(d->getString(i));
          d->prepareTextLayout( textLayout, true );
-         if ( textLayout.maximumWidth() > d->m_maxTextWidth )
+         if ( textLayout.maximumWidth() > getAtomic( d->m_maxTextWidth ) )
             d->m_maxTextWidth = textLayout.maximumWidth();
       }
    }
-   return d->m_maxTextWidth;
+   return getAtomic( d->m_maxTextWidth );
 }
 
 int DiffTextWindow::getNofLines()
@@ -1569,7 +1569,7 @@ public:
       m_pDTW->recalcWordWrapHelper(0,m_visibleTextWidth,m_cacheIdx);
       // int newValue = --s_runnableCount; // in Qt>=5.3 only
       int newValue = s_runnableCount.fetchAndAddOrdered(-1) - 1;
-      g_pProgressDialog->setCurrent(s_maxNofRunnables - s_runnableCount);
+      g_pProgressDialog->setCurrent(s_maxNofRunnables - getAtomic( s_runnableCount ) );
       if (newValue == 0)
       {
          QWidget* p = m_pDTW;
@@ -1653,7 +1653,7 @@ void DiffTextWindow::recalcWordWrap( bool bWordWrap, int wrapLineVectorSize, int
    }
    else
    {
-      if (wrapLineVectorSize == 0 && d->m_maxTextWidth<0 )
+      if (wrapLineVectorSize == 0 && getAtomic( d->m_maxTextWidth ) <0 )
       {
          d->m_diff3WrapLineVector.resize(0);
          d->m_wrapLineCacheList.clear();
@@ -1783,7 +1783,7 @@ void DiffTextWindow::recalcWordWrapHelper( int wrapLineVectorSize, int visibleTe
       int firstD3LineIdx = cacheListIdx * s_linesPerRunnable;
       int endIdx = qMin(firstD3LineIdx + s_linesPerRunnable, size);
 
-      int maxTextWidth = d->m_maxTextWidth; // current value
+      int maxTextWidth = getAtomic( d->m_maxTextWidth ); // current value
       QFontMetrics fm(fontMetrics());
       QTextLayout textLayout(QString(), font(), this);
       for (int i = firstD3LineIdx; i< endIdx; ++i)

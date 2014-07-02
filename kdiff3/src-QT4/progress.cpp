@@ -285,15 +285,6 @@ void ProgressDialog::exitEventLoop()
       m_eventLoopStack.back()->exit();
 }
 
-inline int getAtomic(QAtomicInt& ai)
-{
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
-   return ai.load();
-#else
-   return ai;
-#endif
-}
-
 void ProgressDialog::recalc(bool bUpdate)
 {
    if (!m_bWasCancelled)

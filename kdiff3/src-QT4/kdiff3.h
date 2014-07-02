@@ -314,6 +314,7 @@ class KDiff3App : public QSplitter
 
    virtual bool eventFilter( QObject* o, QEvent* e );
    virtual void resizeEvent(QResizeEvent*);
+   virtual void childEvent(QChildEvent *c);
 
    bool improveFilenames(bool bCreateNewInstance);
 
