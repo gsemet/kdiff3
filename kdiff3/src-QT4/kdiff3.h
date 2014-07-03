@@ -25,6 +25,7 @@
 // include files for Qt
 #include <QSplitter>
 #include <QScrollBar>
+#include <QPointer>
 
 // include files for KDE
 #include <kapplication.h>
@@ -307,10 +308,13 @@ class KDiff3App : public QSplitter
    Options*      m_pOptions;
    FindDialog*   m_pFindDialog;
 
-   void init( bool bAuto=false, TotalDiffStatus* pTotalDiffStatus=0, bool bLoadFiles=true, bool bUseCurrentEncoding = false);
+   void mainInit( TotalDiffStatus* pTotalDiffStatus=0, bool bLoadFiles=true, bool bUseCurrentEncoding = false);
+   bool m_bFinishMainInit;
+   bool m_bLoadFiles;
 
    virtual bool eventFilter( QObject* o, QEvent* e );
    virtual void resizeEvent(QResizeEvent*);
+   virtual void childEvent(QChildEvent *c);
 
    bool improveFilenames(bool bCreateNewInstance);
 
@@ -325,17 +329,22 @@ class KDiff3App : public QSplitter
    KParts::MainWindow*       m_pKDiff3Shell;
    bool m_bAutoFlag;
    bool m_bAutoMode;
-   bool recalcWordWrap(int nofVisibleColumns=-1);
+   void recalcWordWrap(int nofVisibleColumns=-1);
    bool m_bRecalcWordWrapPosted;
    void setHScrollBarRange();
 
    int m_iCumulativeWheelDelta;
 
+   int m_visibleTextWidthForPrinting; // only needed during recalcWordWrap
+   int m_firstD3LIdx;                   // only needed during recalcWordWrap
+   QPointer<QEventLoop> m_pEventLoopForPrinting;
+
 public slots:
-   void resizeDiffTextWindow(int newWidth, int newHeight);
+   void resizeDiffTextWindowHeight(int newHeight);
    void resizeMergeResultWindow();
    void slotRecalcWordWrap();
    void postRecalcWordWrap();
+   void slotFinishRecalcWordWrap();
 
    void showPopupMenu( const QPoint& point );
 
@@ -383,7 +392,7 @@ public slots:
    void slotSelectionStart();
    void slotClipboardChanged();
    void slotOutputModified(bool);
-   void slotAfterFirstPaint();
+   void slotFinishMainInit();
    void slotMergeCurrentFile();
    void slotReload();
    void slotCheckIfCanContinue( bool* pbContinue );

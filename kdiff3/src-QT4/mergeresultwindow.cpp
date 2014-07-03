@@ -47,6 +47,7 @@
 #include <QDropEvent>
 #include <QPaintEvent>
 #include <QTextStream>
+#include <QMimeData>
 
 #include <klocale.h>
 #include <kmessagebox.h>
@@ -2379,7 +2380,7 @@ void MergeResultWindow::keyPressEvent( QKeyEvent* e )
 
       case  Qt::Key_Left:
       case  Qt::Key_Right:
-         if ( e->key()==Qt::Key_Left )
+         if ( (e->key()==Qt::Key_Left) != m_pOptions->m_bRightToLeftLanguage )
          {
             if ( !bCtrl )
             {

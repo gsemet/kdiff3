@@ -119,9 +119,13 @@ static void showHelp()
 QString getTranslationDir(const QString& locale)
 {
    #if defined(_WIN32) || defined(Q_OS_OS2)
+      (void) locale; 
       QString exePath;
       exePath = QCoreApplication::applicationDirPath();
       return exePath+"/translations";
+   #elif defined(__APPLE__)
+      QString exePath = QCoreApplication::applicationDirPath();
+      return exePath+"/../Resources/translations";
    #else
       return  (QString)"/usr/share/locale/" + locale + "/LC_MESSAGES";
    #endif
@@ -1012,10 +1016,16 @@ bool KCmdLineArgs::isSet(const QString& s)
 KApplication* kapp;
 
 KApplication::KApplication()
-: QApplication( s_argc,s_argv )
+: QApplication(s_argc, s_argv)
 {
    kapp = this;
+   #if ! ( defined(_WIN32) || defined(Q_OS_OS2) )
+   parseOptions();
+   #endif
+}
 
+void KApplication::parseOptions()
+{
    //setStyle( new QWindowsStyle ); // doesn't show checkmarks on checkable icons in menu
 
    int nofOptions=0;

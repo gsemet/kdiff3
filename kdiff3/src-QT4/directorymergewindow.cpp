@@ -34,7 +34,7 @@
 #include <QLabel>
 #include <QSplitter>
 #include <QTextEdit>
-#include <QItemDelegate>
+#include <QStyledItemDelegate>
 #include <QPushButton>
 #include <algorithm>
 
@@ -602,13 +602,13 @@ QVariant DirectoryMergeWindow::Data::headerData ( int section, Qt::Orientation o
 }
 
 // Previously  Q3ListViewItem::paintCell(p,cg,column,width,align);
-class DirectoryMergeWindow::DirMergeItemDelegate : public QItemDelegate
+class DirectoryMergeWindow::DirMergeItemDelegate : public QStyledItemDelegate
 {
    DirectoryMergeWindow* m_pDMW;
    DirectoryMergeWindow::Data* d;
 public:
    DirMergeItemDelegate(DirectoryMergeWindow* pParent) 
-      : QItemDelegate(pParent), m_pDMW(pParent), d(pParent->d)
+      : QStyledItemDelegate(pParent), m_pDMW(pParent), d(pParent->d)
    {
    }
    void paint( QPainter * p, const QStyleOptionViewItem & option, const QModelIndex & index ) const 
@@ -672,11 +672,11 @@ public:
       {
          option2.displayAlignment = Qt::AlignRight;
       }
-      QItemDelegate::paint( p, option2, index );
+      QStyledItemDelegate::paint( p, option2, index );
    }
    QSize sizeHint( const QStyleOptionViewItem & option, const QModelIndex & index ) const 
    {
-      QSize sz = QItemDelegate::sizeHint( option, index );
+      QSize sz = QStyledItemDelegate::sizeHint( option, index );
       return sz.expandedTo( QSize(0,18) );
    }
 };

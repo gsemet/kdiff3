@@ -1451,7 +1451,7 @@ static const char* countryMap[]={
    pLanguage->addItem( "Auto" );  // Must not translate, won't work otherwise!
    pLanguage->addItem( "en_orig" );
       
-#if !defined(_WIN32) && !defined(Q_OS_OS2) 
+#if !defined(_WIN32) && !defined(Q_OS_OS2) && !defined(__APPLE__)
    // Read directory: Find all kdiff3_*.qm-files and insert the found files here
    QDir localeDir( "/usr/share/locale" ); // See also kreplacements.cpp: getTranslationDir()
    QStringList dirList = localeDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);

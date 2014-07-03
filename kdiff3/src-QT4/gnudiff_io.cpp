@@ -187,7 +187,7 @@ void GnuDiff::find_and_hash_each_line (struct file_data *current)
 	  case IGNORE_ALL_SPACE:
 	    while ( p<bufend && !isEndOfLine(c = *p) )
             {
-          if (! (isWhite(c)|| (bIgnoreNumbers && (c.isDigit() || c=='-' || c=='.' )) ))
+              if (! (isWhite(c)|| (bIgnoreNumbers && (c.isDigit() || c=='-' || c=='.' )) ))
                  h = HASH (h, c.unicode());
               ++p;
             }
