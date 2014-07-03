@@ -123,6 +123,9 @@ QString getTranslationDir(const QString& locale)
       QString exePath;
       exePath = QCoreApplication::applicationDirPath();
       return exePath+"/translations";
+   #elif defined(__APPLE__)
+      QString exePath = QCoreApplication::applicationDirPath();
+      return exePath+"/../Resources/translations";
    #else
       return  (QString)"/usr/share/locale/" + locale + "/LC_MESSAGES";
    #endif

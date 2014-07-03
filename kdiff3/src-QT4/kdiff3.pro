@@ -74,4 +74,3 @@ unix {
   INSTALLS += target
 }
 
-macx:LIBS += -framework Foundation

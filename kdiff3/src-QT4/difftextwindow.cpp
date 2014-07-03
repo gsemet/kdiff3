@@ -1043,7 +1043,12 @@ void DiffTextWindowData::writeLine(
       }
       if ( !bWrapLine || wrapLineLength>0 )
       {
-         p.setPen( QPen( m_pOptions->m_fgColor, 0, bWrapLine ? Qt::DotLine : Qt::SolidLine) );
+#if defined(__APPLE__) && (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+         Qt::PenStyle wrapLinePenStyle = Qt::DashLine; // Qt::DotLine doesn't work on Mac (Qt4.8.6).
+#else
+         Qt::PenStyle wrapLinePenStyle = Qt::DotLine;
+#endif
+         p.setPen( QPen( m_pOptions->m_fgColor, 0, bWrapLine ? wrapLinePenStyle : Qt::SolidLine) );
          p.drawLine( xOffset +1, yOffset, xOffset +1, yOffset+fontHeight-1 );
          p.setPen( QPen( m_pOptions->m_fgColor, 0, Qt::SolidLine) );
       }
