@@ -1,4 +1,4 @@
-Version 0.9.98 - 2014-07-03
+Version 0.9.98 - 2014-07-04
 ===========================
 - Text rendering now with QTextLayout fixes the following issues
   - Correct handling for variable width fonts.

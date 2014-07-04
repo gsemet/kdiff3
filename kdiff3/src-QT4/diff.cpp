@@ -920,12 +920,13 @@ void SourceData::FileData::preprocess( bool bPreserveCR, QTextCodec* pEncoding )
          if ( lineIdx < vOrigDataLineEndStyle.count() && bPreserveCR && i<ucSize)
          {
             ++m_v[lineIdx].size;
-            switch ( vOrigDataLineEndStyle[lineIdx] )
-            {
+            const_cast<QChar*>(m_v[lineIdx].pLine)[lineLength] = '\r';
+            //switch ( vOrigDataLineEndStyle[lineIdx] )
+            //{
             //case eLineEndStyleUnix: const_cast<QChar*>(m_v[lineIdx].pLine)[lineLength] = '\n'; break;
-            case eLineEndStyleDos:  const_cast<QChar*>(m_v[lineIdx].pLine)[lineLength] = '\r'; break;
+            //case eLineEndStyleDos:  const_cast<QChar*>(m_v[lineIdx].pLine)[lineLength] = '\r'; break;
             //case eLineEndStyleUndefined: const_cast<QChar*>(m_v[lineIdx].pLine)[lineLength] = '\x0b'; break;
-            }
+            //}
          }
          lineLength = 0;
          bNonWhiteFound = false;
