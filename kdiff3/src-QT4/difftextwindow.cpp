@@ -807,7 +807,7 @@ public:
    }
 };
 
-void DiffTextWindowData::prepareTextLayout( QTextLayout& textLayout, bool bFirstLine, int visibleTextWidth )
+void DiffTextWindowData::prepareTextLayout( QTextLayout& textLayout, bool /*bFirstLine*/, int visibleTextWidth )
 {
    QTextOption textOption;
    textOption.setTabStop( QFontMetricsF(m_pDiffTextWindow->font()).width(' ') * m_pOptions->m_tabSize );
@@ -858,7 +858,7 @@ void DiffTextWindowData::prepareTextLayout( QTextLayout& textLayout, bool bFirst
          line.setLineWidth( visibleTextWidth -indentation );
          line.setPosition(QPointF(indentation, height));
          height += line.height();
-         bFirstLine = false;
+         //bFirstLine = false;
       }
       else // only one line
       {

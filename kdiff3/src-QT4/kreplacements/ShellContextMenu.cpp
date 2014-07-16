@@ -218,7 +218,7 @@ UINT CShellContextMenu::ShowContextMenu(QWidget * pParentWidget, QPoint pt, QMen
 
 void CShellContextMenu::InvokeCommand (LPCONTEXTMENU pContextMenu, UINT idCommand)
 {
-	CMINVOKECOMMANDINFO cmi = {0};
+    CMINVOKECOMMANDINFO cmi = {0,0,0,0,0,0,0,0,0};
 	cmi.cbSize = sizeof (CMINVOKECOMMANDINFO);
 	cmi.lpVerb = (LPSTR) MAKEINTRESOURCE (idCommand);
 	cmi.nShow = SW_SHOWNORMAL;
