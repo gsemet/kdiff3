@@ -32,18 +32,18 @@ void ProgressProxy::setInformation( const QString& info, bool bRedrawUpdate )
   (void)bRedrawUpdate;
 }
 
-void ProgressProxy::setInformation( const QString& info, double dCurrent, bool bRedrawUpdate )
+void ProgressProxy::setInformation( const QString& info, int current, bool bRedrawUpdate )
 {
   /* Suppress warning about unused parameters */
   (void)info;
-  (void)dCurrent;
+  (void)current;
   (void)bRedrawUpdate;
 }
 
-void ProgressProxy::setCurrent( double dCurrent, bool bRedrawUpdate )
+void ProgressProxy::setCurrent( int current, bool bRedrawUpdate )
 {
   /* Suppress warning about unused parameters */
-  (void)dCurrent;
+  (void)current;
   (void)bRedrawUpdate;
 }
 
@@ -53,13 +53,17 @@ void ProgressProxy::step( bool bRedrawUpdate )
   (void)bRedrawUpdate;
 }
 
+void ProgressProxy::setMaxNofSteps( int dMaxNofSteps )
+{
+  /* Suppress warning about unused parameters */
+  (void)dMaxNofSteps;
+}
+
+
+
 bool ProgressProxy::wasCancelled()
 {
   return false;
-}
-
-void ProgressProxy::exitEventLoop()
-{
 }
 
 void ProgressProxy::enterEventLoop( KJob* pJob, const QString& jobInfo )
@@ -67,6 +71,16 @@ void ProgressProxy::enterEventLoop( KJob* pJob, const QString& jobInfo )
   /* Suppress warning about unused parameters */
   (void)pJob;
   (void)jobInfo;
+}
+
+void ProgressProxy::exitEventLoop()
+{
+}
+
+void ProgressDialog::recalc(bool bUpdate)
+{
+  /* Suppress warning about unused parameters */
+  (void)bUpdate;
 }
 
 QDialog *ProgressProxy::getDialog()

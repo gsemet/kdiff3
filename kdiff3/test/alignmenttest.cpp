@@ -88,6 +88,8 @@ void printDiffList(const Diff3LineList &diff3LineList,
       {
          const LineData *pLineData = &sd1.getLineDataForDiff()[d3l.lineA];
          lineAText = QString(pLineData->pLine, pLineData->size);
+         lineAText.replace(QString("\r"), QString("\\r"));
+         lineAText.replace(QString("\n"), QString("\\n"));
          lineAText = QString("%1 %2").arg(d3l.lineA, linenumsize).arg(lineAText.left(columnsize - linenumsize - 1));
       }
 
@@ -95,6 +97,8 @@ void printDiffList(const Diff3LineList &diff3LineList,
       {
          const LineData *pLineData = &sd2.getLineDataForDiff()[d3l.lineB];
          lineBText = QString(pLineData->pLine, pLineData->size);
+         lineBText.replace(QString("\r"), QString("\\r"));
+         lineBText.replace(QString("\n"), QString("\\n"));
          lineBText = QString("%1 %2").arg(d3l.lineB, linenumsize).arg(lineBText.left(columnsize - linenumsize - 1));
       }
 
@@ -102,6 +106,8 @@ void printDiffList(const Diff3LineList &diff3LineList,
       {
          const LineData *pLineData = &sd3.getLineDataForDiff()[d3l.lineC];
          lineCText = QString(pLineData->pLine, pLineData->size);
+         lineCText.replace(QString("\r"), QString("\\r"));
+         lineCText.replace(QString("\n"), QString("\\n"));
          lineCText = QString("%1 %2").arg(d3l.lineC, linenumsize).arg(lineCText.left(columnsize - linenumsize - 1));
       }
 
@@ -163,6 +169,7 @@ bool runTest(QString file1, QString file2, QString file3, QString expectedResult
    QTextStream out(stdout);
 
    options.m_bIgnoreCase = false;
+   options.m_bPreserveCarriageReturn = false;
    options.m_bDiff3AlignBC = true;
 
    m_pOptions = &options;
