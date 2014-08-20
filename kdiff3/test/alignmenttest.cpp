@@ -226,14 +226,28 @@ bool dataIsConsistent(int line1, QString &line1Text, int line2, QString &line2Te
    }
    else
    {
+      /* If the equal boolean is true the line content must be the same,
+       * if the line content is different the boolean should be false,
+       * but other than that we can't be sure:
+       * - if the line content is the same the boolean may not be true because
+       *   GNU diff may have put that line as a removal in the first file and
+       *   an addition in the second.
+       * - also the comparison this test does between lines considers all
+       *   whitespace equal, while GNU diff doesn't (for instance U+0020 vs U+00A0)
+       */
       if(equal)
       {
          consistent = (line1Text == line2Text);
       }
+      else if (line1Text != line2Text)
+      {
+         consistent = !equal;
+      }
       else
       {
-         consistent = (line1Text != line2Text);
+         consistent = true;
       }
+
    }
    return consistent;
 }
