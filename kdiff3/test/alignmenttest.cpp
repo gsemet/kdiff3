@@ -21,10 +21,6 @@ ManualDiffHelpList m_manualDiffHelpList;
 bool g_bIgnoreWhiteSpace = true;
 bool g_bIgnoreTrivialMatches = true;
 
-void printDiff3List(const Diff3LineList &diff3LineList,
-                   const SourceData &sd1,
-                   const SourceData &sd2,
-                   const SourceData &sd3);
 
 void printDiffList(const QString caption, const DiffList &diffList)
 {
@@ -40,15 +36,73 @@ void printDiffList(const QString caption, const DiffList &diffList)
    }
 }
 
+void printDiff3List(const Diff3LineList &diff3LineList,
+                   const SourceData &sd1,
+                   const SourceData &sd2,
+                   const SourceData &sd3,
+                   bool forceVerbosity=false)
+{
+   const int columnsize = 30;
+   const int linenumsize = 6;
+   Diff3LineList::const_iterator i;
+   for ( i=diff3LineList.begin(); i!=diff3LineList.end(); ++i )
+   {
+      QTextStream out(stdout);
+      QString lineAText;
+      QString lineBText;
+      QString lineCText;
+
+      const Diff3Line& d3l = *i;
+
+      if(d3l.lineA != -1)
+      {
+         const LineData *pLineData = &sd1.getLineDataForDiff()[d3l.lineA];
+         lineAText = QString(pLineData->pLine, pLineData->size);
+         lineAText.replace(QString("\r"), QString("\\r"));
+         lineAText.replace(QString("\n"), QString("\\n"));
+         lineAText = QString("%1 %2").arg(d3l.lineA, linenumsize).arg(lineAText.left(columnsize - linenumsize - 1));
+      }
+
+      if(d3l.lineB != -1)
+      {
+         const LineData *pLineData = &sd2.getLineDataForDiff()[d3l.lineB];
+         lineBText = QString(pLineData->pLine, pLineData->size);
+         lineBText.replace(QString("\r"), QString("\\r"));
+         lineBText.replace(QString("\n"), QString("\\n"));
+         lineBText = QString("%1 %2").arg(d3l.lineB, linenumsize).arg(lineBText.left(columnsize - linenumsize - 1));
+      }
+
+      if(d3l.lineC != -1)
+      {
+         const LineData *pLineData = &sd3.getLineDataForDiff()[d3l.lineC];
+         lineCText = QString(pLineData->pLine, pLineData->size);
+         lineCText.replace(QString("\r"), QString("\\r"));
+         lineCText.replace(QString("\n"), QString("\\n"));
+         lineCText = QString("%1 %2").arg(d3l.lineC, linenumsize).arg(lineCText.left(columnsize - linenumsize - 1));
+      }
+
+      out << QString("%1 %2 %3").arg(lineAText, -columnsize)
+                                .arg(lineBText, -columnsize)
+                                .arg(lineCText, -columnsize);
+      if(verbose || forceVerbosity)
+      {
+         out << " " << d3l.bAEqB << " " << d3l.bBEqC << " " << d3l.bAEqC;
+      }
+
+      out << endl;
+   }
+}
+
 void printDiff3List(QString caption,
                    const Diff3LineList &diff3LineList,
                    const SourceData &sd1,
                    const SourceData &sd2,
-                   const SourceData &sd3)
+                   const SourceData &sd3,
+                   bool forceVerbosity=false)
 {
    QTextStream out(stdout);
    out << "Printing diff3list " << caption << ":" << endl;
-   printDiff3List(diff3LineList, sd1, sd2, sd3);
+   printDiff3List(diff3LineList, sd1, sd2, sd3, forceVerbosity);
 }
 
 void determineFileAlignment(SourceData &m_sd1, SourceData &m_sd2, SourceData &m_sd3, Diff3LineList &m_diff3LineList)
@@ -116,62 +170,6 @@ QString getLineFromSourceData(const SourceData &sd, int line)
    lineText.replace(QString("\r"), QString("\\r"));
    lineText.replace(QString("\n"), QString("\\n"));
    return lineText;
-}
-
-void printDiff3List(const Diff3LineList &diff3LineList,
-                   const SourceData &sd1,
-                   const SourceData &sd2,
-                   const SourceData &sd3)
-{
-   const int columnsize = 30;
-   const int linenumsize = 6;
-   Diff3LineList::const_iterator i;
-   for ( i=diff3LineList.begin(); i!=diff3LineList.end(); ++i )
-   {
-      QTextStream out(stdout);
-      QString lineAText;
-      QString lineBText;
-      QString lineCText;
-
-      const Diff3Line& d3l = *i;
-
-      if(d3l.lineA != -1)
-      {
-         const LineData *pLineData = &sd1.getLineDataForDiff()[d3l.lineA];
-         lineAText = QString(pLineData->pLine, pLineData->size);
-         lineAText.replace(QString("\r"), QString("\\r"));
-         lineAText.replace(QString("\n"), QString("\\n"));
-         lineAText = QString("%1 %2").arg(d3l.lineA, linenumsize).arg(lineAText.left(columnsize - linenumsize - 1));
-      }
-
-      if(d3l.lineB != -1)
-      {
-         const LineData *pLineData = &sd2.getLineDataForDiff()[d3l.lineB];
-         lineBText = QString(pLineData->pLine, pLineData->size);
-         lineBText.replace(QString("\r"), QString("\\r"));
-         lineBText.replace(QString("\n"), QString("\\n"));
-         lineBText = QString("%1 %2").arg(d3l.lineB, linenumsize).arg(lineBText.left(columnsize - linenumsize - 1));
-      }
-
-      if(d3l.lineC != -1)
-      {
-         const LineData *pLineData = &sd3.getLineDataForDiff()[d3l.lineC];
-         lineCText = QString(pLineData->pLine, pLineData->size);
-         lineCText.replace(QString("\r"), QString("\\r"));
-         lineCText.replace(QString("\n"), QString("\\n"));
-         lineCText = QString("%1 %2").arg(d3l.lineC, linenumsize).arg(lineCText.left(columnsize - linenumsize - 1));
-      }
-
-      out << QString("%1 %2 %3").arg(lineAText, -columnsize)
-                                .arg(lineBText, -columnsize)
-                                .arg(lineCText, -columnsize);
-      if(verbose)
-      {
-         out << " " << d3l.bAEqB << " " << d3l.bBEqC << " " << d3l.bAEqC;
-      }
-
-      out << endl;
-   }
 }
 
 
@@ -372,7 +370,7 @@ bool runTest(QString file1, QString file2, QString file3, QString expectedResult
 
       out << "Actual result has inconsistent equality booleans:" << endl;
       out << "----------------------------------------------------------------------------------------------" << endl;
-      printDiff3List(actualDiff3LineList, m_sd1, m_sd2, m_sd3);
+      printDiff3List(actualDiff3LineList, m_sd1, m_sd2, m_sd3, true);
    }
    else if(equal)
    {
