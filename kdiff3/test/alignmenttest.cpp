@@ -328,9 +328,9 @@ bool runTest(QString file1, QString file2, QString file3, QString expectedResult
       }
 
       /* Check if the booleans that indicate if lines are equal are consistent with the content of the lines */
-      QString lineAText = (p_actual->lineA == -1) ? "" : getLineFromSourceData(m_sd1, p_actual->lineA).simplified();
-      QString lineBText = (p_actual->lineB == -1) ? "" : getLineFromSourceData(m_sd2, p_actual->lineB).simplified();
-      QString lineCText = (p_actual->lineC == -1) ? "" : getLineFromSourceData(m_sd3, p_actual->lineC).simplified();
+      QString lineAText = (p_actual->lineA == -1) ? "" : getLineFromSourceData(m_sd1, p_actual->lineA).simplified().replace(" ", "");
+      QString lineBText = (p_actual->lineB == -1) ? "" : getLineFromSourceData(m_sd2, p_actual->lineB).simplified().replace(" ", "");
+      QString lineCText = (p_actual->lineC == -1) ? "" : getLineFromSourceData(m_sd3, p_actual->lineC).simplified().replace(" ", "");
 
       if(!dataIsConsistent(p_actual->lineA, lineAText, p_actual->lineB, lineBText, p_actual->bAEqB))
       {
