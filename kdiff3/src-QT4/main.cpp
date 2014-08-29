@@ -101,10 +101,14 @@ class ContextFreeTranslator : public QTranslator
 {
 public:
    ContextFreeTranslator( QObject* pParent ) : QTranslator(pParent) {}
-   QString translate(const char* context, const char* sourceText, const char* comment ) const
+#if QT_VERSION>=0x050000
+   QString translate(const char * context, const char * sourceText, const char * disambiguation, int /*n*/ ) const /*override*/
+#else
+   QString translate(const char* context, const char* sourceText, const char* disambiguation ) const /*override*/
+#endif
    {
       if ( context != 0 )
-         return QTranslator::translate(0,sourceText,comment);
+         return QTranslator::translate(0,sourceText,disambiguation);
       else
          return QString();
    }
